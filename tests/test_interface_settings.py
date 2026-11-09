@@ -4,6 +4,7 @@ import tomllib
 from dataclasses import fields, replace
 
 import pytest
+from settings_helpers import random_settings
 
 from mathdoer.interface_settings import (
     DEFAULT_INTERFACE_SETTINGS,
@@ -57,16 +58,6 @@ def read_error_for(settings_path):
     with pytest.raises(InterfaceSettingsError) as caught:
         read_interface_settings(settings_path)
     return str(caught.value)
-
-
-def random_settings(generator):
-    values = {}
-    for description in SETTING_DESCRIPTIONS:
-        if description.value_type is bool:
-            values[description.name] = generator.choice([True, False])
-        else:
-            values[description.name] = generator.randint(description.minimum, description.maximum)
-    return InterfaceSettings(**values)
 
 
 # ------------------------------------------------------------------ what the settings are

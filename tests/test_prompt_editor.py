@@ -3,6 +3,7 @@ import pytest
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QKeyEvent, QTextCursor
 
+from editor_helpers import caret_of, load, press, qt_index, selection_of
 from mathdoer.interface.prompt_editor import PromptEditor
 from mathdoer.interface.theme import DARK_THEME
 from mathdoer.languages.python import PYTHON
@@ -21,36 +22,6 @@ def editor(qtbot):
     widget.resize(600, 300)
     widget.show()
     return widget
-
-
-def qt_index(text, line, column):
-    """The text box position of a line and column in text that has no wide characters."""
-    return sum(len(earlier) + 1 for earlier in text.split("\n")[:line]) + column
-
-
-def load(editor, text, caret=None, anchor=None):
-    """Put the text in the box. The caret is (line, column), by default the end of the text."""
-    editor.setPlainText(text)
-    lines = text.split("\n")
-    caret = caret or (len(lines) - 1, len(lines[-1]))
-    cursor = editor.textCursor()
-    cursor.setPosition(qt_index(text, *(anchor or caret)))
-    cursor.setPosition(qt_index(text, *caret), QTextCursor.MoveMode.KeepAnchor)
-    editor.setTextCursor(cursor)
-
-
-def caret_of(editor):
-    cursor = editor.textCursor()
-    return cursor.blockNumber(), cursor.positionInBlock()
-
-
-def selection_of(editor):
-    cursor = editor.textCursor()
-    return cursor.selectionStart(), cursor.selectionEnd()
-
-
-def press(qtbot, editor, key, modifiers=NONE):
-    qtbot.keyClick(editor, key, modifiers)
 
 
 # ------------------------------------------------------------------------------ Tab

@@ -1,9 +1,10 @@
 """The main window: a prompt box above an output box."""
 import time
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QCloseEvent, QGuiApplication, QKeySequence, QShortcut
 from PySide6.QtWidgets import QMainWindow, QSplitter
 
@@ -18,6 +19,7 @@ from mathdoer.interface.prompt_pane import PromptPane
 from mathdoer.interface.registry_menus import add_registry_menus
 from mathdoer.interface.styling import apply_menu_theme, window_palette
 from mathdoer.interface.theme import DARK_THEME, Theme
+from mathdoer.interface_settings import DEFAULT_INTERFACE_SETTINGS, InterfaceSettings, write_interface_settings
 from mathdoer.output_buffer import DEFAULT_MAXIMUM_CHARACTER_COUNT, OutputBuffer
 from mathdoer.output_text import normalize_output_text
 from mathdoer.progress import progress_text
@@ -50,6 +52,8 @@ def crashed_marker(exit_code: int) -> str:
 
 
 class MainWindow(QMainWindow):
+    interface_settings_changed = Signal(object)  # the new InterfaceSettings
+
     def __init__(
         self,
         run_settings: RunSettings,
@@ -59,9 +63,15 @@ class MainWindow(QMainWindow):
         registry: Registry | None = None,
         keyboard_modifiers: Callable[[], Qt.KeyboardModifier] = QGuiApplication.keyboardModifiers,
         open_in_text_editor: Callable[[Path], None] = text_editor.open_in_text_editor,
+        interface_settings: InterfaceSettings = DEFAULT_INTERFACE_SETTINGS,
+        interface_settings_path: Path | None = None,
         parent=None,
     ):
+        """Changes to the interface settings are saved in the file at interface_settings_path,
+        or not saved at all when it is None."""
         super().__init__(parent)
+        self._interface_settings = interface_settings
+        self._interface_settings_path = interface_settings_path
         self._run_settings = run_settings
         self._clock = clock
         self._keyboard_modifiers = keyboard_modifiers
@@ -108,17 +118,24 @@ class MainWindow(QMainWindow):
         for sequence in RUN_SHORTCUTS:
             QShortcut(QKeySequence(sequence), self, activated=self.run_prompt)
         QShortcut(QKeySequence(CANCEL_SHORTCUT), self, activated=self.cancel_run)
-        for sequence in ZOOM_IN_SHORTCUTS:
-            QShortcut(QKeySequence(sequence), self, activated=lambda: self.zoom_by(1))
-        QShortcut(QKeySequence(ZOOM_OUT_SHORTCUT), self, activated=lambda: self.zoom_by(-1))
-        QShortcut(QKeySequence(ZOOM_RESET_SHORTCUT), self, activated=lambda: self.set_font_size(DEFAULT_POINT_SIZE))
         QShortcut(QKeySequence(WORD_WRAP_SHORTCUT), self, activated=self.toggle_word_wrap)
-        QShortcut(QKeySequence(FIND_SHORTCUT), self, activated=self.find_bar.show_find)
-        QShortcut(QKeySequence(REPLACE_SHORTCUT), self, activated=self.find_bar.show_replace)
-        QShortcut(QKeySequence(FIND_NEXT_SHORTCUT), self, activated=lambda: self.find_bar.step_from_shortcut(True))
-        QShortcut(
-            QKeySequence(FIND_PREVIOUS_SHORTCUT), self, activated=lambda: self.find_bar.step_from_shortcut(False)
-        )
+
+        # The shortcuts of the features that the settings can turn off, kept by feature.
+        self._zoom_shortcuts = [
+            *(QShortcut(QKeySequence(sequence), self, activated=lambda: self.zoom_by(1)) for sequence in ZOOM_IN_SHORTCUTS),
+            QShortcut(QKeySequence(ZOOM_OUT_SHORTCUT), self, activated=lambda: self.zoom_by(-1)),
+            QShortcut(QKeySequence(ZOOM_RESET_SHORTCUT), self, activated=lambda: self.set_font_size(DEFAULT_POINT_SIZE)),
+        ]
+        self._find_shortcuts = [
+            QShortcut(QKeySequence(FIND_SHORTCUT), self, activated=self.find_bar.show_find),
+            QShortcut(QKeySequence(REPLACE_SHORTCUT), self, activated=self.find_bar.show_replace),
+            QShortcut(
+                QKeySequence(FIND_NEXT_SHORTCUT), self, activated=lambda: self.find_bar.step_from_shortcut(True)
+            ),
+            QShortcut(
+                QKeySequence(FIND_PREVIOUS_SHORTCUT), self, activated=lambda: self.find_bar.step_from_shortcut(False)
+            ),
+        ]
         for box in (self.prompt_box, self.output_box):
             box.zoom_requested.connect(self.zoom_by)
 
@@ -126,6 +143,7 @@ class MainWindow(QMainWindow):
         self._timer.setInterval(POLL_INTERVAL_MILLISECONDS)
         self._timer.timeout.connect(self.poll_run)
 
+        self._apply_interface_settings()
         self.prompt_box.setFocus()
 
     @property
@@ -145,6 +163,14 @@ class MainWindow(QMainWindow):
         return self._run_settings.settings_path
 
     @property
+    def interface_settings(self) -> InterfaceSettings:
+        return self._interface_settings
+
+    @property
+    def interface_settings_path(self) -> Path | None:
+        return self._interface_settings_path
+
+    @property
     def find_bar(self) -> FindBar:
         return self.prompt_pane.find_bar
 
@@ -162,8 +188,34 @@ class MainWindow(QMainWindow):
         self.set_font_size(self._font_size + steps)
 
     def toggle_word_wrap(self) -> None:
-        """Turn word wrap on or off in the box that has the focus."""
-        self._active_box.active_box().toggle_word_wrap()
+        """Turn word wrap on or off in the box that has the focus. The choice is kept as the
+        setting, so the settings window shows what the box does."""
+        box = self._active_box.active_box()
+        setting = "wrap_prompt_box_lines" if box is self.prompt_box else "wrap_output_box_lines"
+        self.change_interface_settings(replace(self._interface_settings, **{setting: not box.word_wrap}))
+
+    def change_interface_settings(self, settings: InterfaceSettings) -> None:
+        """Take on the settings, save them, and tell whoever listens. A save that fails is
+        reported in the output box; the settings stay in force until the window closes."""
+        self._interface_settings = settings
+        self._apply_interface_settings()
+        if self._interface_settings_path is not None:
+            try:
+                write_interface_settings(self._interface_settings_path, settings)
+            except OSError as error:
+                self._show_status(f"[could not save the settings: {error}]")
+        self.interface_settings_changed.emit(settings)
+
+    def _apply_interface_settings(self) -> None:
+        settings = self._interface_settings
+        self.prompt_box.apply_interface_settings(settings)
+        self.output_box.apply_interface_settings(settings)
+        for shortcut in self._zoom_shortcuts:
+            shortcut.setEnabled(settings.zoom_with_keys)
+        for shortcut in self._find_shortcuts:
+            shortcut.setEnabled(settings.find_and_replace_bar)
+        if not settings.find_and_replace_bar:
+            self.find_bar.close_bar()
 
     def _insert_registry_entry(self, entry: RegistryEntry) -> None:
         """Insert the entry's name, or its literal value when Shift is held."""

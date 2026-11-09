@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QFrame, QPlainTextEdit
 from mathdoer.interface.fonts import monospace_font
 from mathdoer.interface.styling import text_box_palette
 from mathdoer.interface.theme import Theme
+from mathdoer.interface_settings import InterfaceSettings
 
 WHEEL_UNITS_PER_ZOOM_STEP = 120  # one notch of a mouse wheel
 
@@ -19,9 +20,14 @@ class TextBox(QPlainTextEdit):
     def __init__(self, theme: Theme, parent=None):
         super().__init__(parent)
         self._wheel_units_not_yet_used = 0
+        self._zoom_with_mouse_wheel = True
         self.setFont(monospace_font())
         self.setPalette(text_box_palette(self.palette(), theme))
         self.setFrameShape(QFrame.Shape.NoFrame)
+
+    def apply_interface_settings(self, settings: InterfaceSettings) -> None:
+        """Take on the settings that concern this box. A box that has more of its own adds to this."""
+        self._zoom_with_mouse_wheel = settings.zoom_with_mouse_wheel
 
     def set_font_size(self, point_size: int) -> None:
         self.setFont(monospace_font(point_size))
@@ -30,13 +36,17 @@ class TextBox(QPlainTextEdit):
     def word_wrap(self) -> bool:
         return self.lineWrapMode() == QPlainTextEdit.LineWrapMode.WidgetWidth
 
-    def toggle_word_wrap(self) -> None:
+    def set_word_wrap(self, wrapped: bool) -> None:
         self.setLineWrapMode(
-            QPlainTextEdit.LineWrapMode.NoWrap if self.word_wrap else QPlainTextEdit.LineWrapMode.WidgetWidth
+            QPlainTextEdit.LineWrapMode.WidgetWidth if wrapped else QPlainTextEdit.LineWrapMode.NoWrap
         )
 
+    def toggle_word_wrap(self) -> None:
+        self.set_word_wrap(not self.word_wrap)
+
     def wheelEvent(self, event: QWheelEvent) -> None:
-        if not event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+        # Without zooming, Ctrl and the wheel are left to Qt, which scrolls a page at a time.
+        if not event.modifiers() & Qt.KeyboardModifier.ControlModifier or not self._zoom_with_mouse_wheel:
             super().wheelEvent(event)
             return
         # Smooth scrolling sends many small steps; each full notch is one zoom step.

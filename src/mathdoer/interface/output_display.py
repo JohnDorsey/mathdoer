@@ -6,6 +6,7 @@ from PySide6.QtGui import QColor, QTextCharFormat, QTextCursor
 
 from mathdoer.interface.text_box import TextBox
 from mathdoer.interface.theme import Theme
+from mathdoer.interface_settings import InterfaceSettings
 from mathdoer.utf16 import utf16_length
 
 PARAGRAPH_SEPARATORS = ("\n", " ")
@@ -42,6 +43,10 @@ class OutputDisplay(TextBox):
         text_format = QTextCharFormat()
         text_format.setForeground(QColor(color))
         return text_format
+
+    def apply_interface_settings(self, settings: InterfaceSettings) -> None:
+        super().apply_interface_settings(settings)
+        self.set_word_wrap(settings.wrap_output_box_lines)
 
     def clear_output(self) -> None:
         self.clear()

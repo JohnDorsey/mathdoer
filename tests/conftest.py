@@ -164,11 +164,28 @@ def fake_clock():
 
 
 @pytest.fixture
-def make_window(qtbot, make_python_run_settings, fake_clock):
+def editor(qtbot):
+    """A prompt box on its own, shown, for tests of editing keys and how the box looks."""
+    from mathdoer.interface.prompt_editor import PromptEditor
+    from mathdoer.interface.theme import DARK_THEME
+
+    widget = PromptEditor(DARK_THEME, PYTHON)
+    qtbot.addWidget(widget)
+    widget.resize(600, 300)
+    widget.show()
+    qtbot.waitExposed(widget)
+    return widget
+
+
+@pytest.fixture
+def make_window(qtbot, make_python_run_settings, fake_clock, tmp_path):
     """Show a main window, ready for key presses. Options for the run settings
     (working_directory, interpreter_path, registry_path, settings_text) and the startup file
-    text are passed to make_python_run_settings; the rest go to MainWindow."""
+    text are passed to make_python_run_settings; the rest go to MainWindow. The window saves
+    its interface settings in the temporary folder, never in the user's own, unless the
+    test passes another interface_settings_path (None saves nothing)."""
     from mathdoer.interface.main_window import MainWindow
+    from mathdoer.user_files import interface_settings_file_path
 
     def make(startup_text="", **options):
         settings_options = {
@@ -176,6 +193,7 @@ def make_window(qtbot, make_python_run_settings, fake_clock):
             for name in ("working_directory", "interpreter_path", "registry_path", "settings_text")
             if name in options
         }
+        options.setdefault("interface_settings_path", interface_settings_file_path(tmp_path))
         settings = make_python_run_settings(startup_text=startup_text, **settings_options)
         window = MainWindow(settings, clock=fake_clock, **options)
         qtbot.addWidget(window)

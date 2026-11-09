@@ -11,6 +11,7 @@ from mathdoer.indentation_guides import guide_columns
 from mathdoer.interface.syntax_highlighter import SyntaxHighlighter
 from mathdoer.interface.text_box import TextBox
 from mathdoer.interface.theme import Theme
+from mathdoer.interface_settings import DEFAULT_INTERFACE_SETTINGS, InterfaceSettings
 from mathdoer.languages import Language
 from mathdoer.line_editing import (
     Position,
@@ -22,6 +23,7 @@ from mathdoer.line_editing import (
     indent,
     insert_newline,
     move_lines,
+    tab_insertion,
     toggle_comment,
 )
 from mathdoer.utf16 import index_at_utf16_offset, utf16_length
@@ -78,6 +80,7 @@ class _LineNumberGutter(QWidget):
 
 class PromptEditor(TextBox):
     _ready = False  # set once everything the font-change handler uses exists
+    _settings = DEFAULT_INTERFACE_SETTINGS
 
     def __init__(self, theme: Theme, language: Language, parent=None):
         super().__init__(theme, parent)
@@ -95,18 +98,32 @@ class PromptEditor(TextBox):
         self._ready = True
         self._font_changed()
 
+    # ------------------------------------------------------------------- settings
+
+    def apply_interface_settings(self, settings: InterfaceSettings) -> None:
+        """Turn the features of the box on or off as the settings say."""
+        super().apply_interface_settings(settings)
+        self._settings = settings
+        self.set_word_wrap(settings.wrap_prompt_box_lines)
+        self._highlighter.set_coloring(settings.highlight_syntax)
+        self.gutter.setVisible(settings.show_line_numbers)
+        self._update_gutter_width()
+        self.viewport().update()  # the indentation guides
+        self._update_bracket_highlight()
+
     # ----------------------------------------------------------- bracket highlight
 
     def _update_bracket_highlight(self) -> None:
-        position = self._position_of(self.textCursor().position())
-        pair = find_bracket_pair(
-            _DocumentLines(self.document()),
-            position,
-            self._rules,
-            self._language.lex_line,
-            state_before=self._lexer_state_before_line,
-        )
         self._bracket_selections = []
+        pair = None
+        if self._settings.highlight_matching_brackets:
+            pair = find_bracket_pair(
+                _DocumentLines(self.document()),
+                self._position_of(self.textCursor().position()),
+                self._rules,
+                self._language.lex_line,
+                state_before=self._lexer_state_before_line,
+            )
         if pair is not None:
             for bracket in (pair.first, pair.second):
                 start = self._qt_position_of(bracket)
@@ -143,10 +160,14 @@ class PromptEditor(TextBox):
     # ------------------------------------------------------------ line numbers
 
     def gutter_width(self) -> int:
+        if not self._settings.show_line_numbers:
+            return 0
         digits = max(MINIMUM_GUTTER_DIGITS, len(str(max(1, self.blockCount()))))
         return 2 * GUTTER_PADDING + digits * self.fontMetrics().horizontalAdvance("9")
 
     def visible_line_numbers(self) -> list[int]:
+        if not self._settings.show_line_numbers:
+            return []
         return [block.blockNumber() + 1 for block, _, _ in self._visible_blocks()]
 
     def paint_gutter(self, event: QPaintEvent) -> None:
@@ -184,6 +205,8 @@ class PromptEditor(TextBox):
     # ------------------------------------------------------- indentation guides
 
     def visible_indentation_guides(self) -> list[IndentationGuide]:
+        if not self._settings.show_indentation_guides:
+            return []
         lines = _DocumentLines(self.document())
         space_width = self.fontMetrics().horizontalAdvance(" ")
         left = self.contentOffset().x() + self.document().documentMargin()
@@ -254,30 +277,70 @@ class PromptEditor(TextBox):
             command()
             event.accept()
             return
-        if key == Key.Key_Home and modifiers in (Modifier.NoModifier, Modifier.ShiftModifier):
+        if (
+            key == Key.Key_Home
+            and modifiers in (Modifier.NoModifier, Modifier.ShiftModifier)
+            and self._settings.home_key_goes_to_first_character
+        ):
             self._go_to_start_of_line(select=modifiers == Modifier.ShiftModifier)
             event.accept()
             return
         super().keyPressEvent(event)
 
     def _command_for(self, key: int, modifiers: Modifier) -> Callable[[], None] | None:
+        """What the key does here, or None to leave it to the text box. A command that is turned
+        off in the settings is None as well; Shift+Tab is taken and does nothing, so that it
+        does not move the focus away."""
         rules = self._rules
+        settings = self._settings
+        use_tab_character = not settings.tab_key_inserts_spaces
         if modifiers == Modifier.NoModifier and key == Key.Key_Tab:
-            return lambda: self._apply_command(lambda lines, a, c: indent(lines, a, c, rules))
+            if not settings.tab_indents_selected_lines:
+                return self._replace_selection_with_tab
+            return lambda: self._apply_command(
+                lambda lines, a, c: indent(lines, a, c, rules, use_tab_character=use_tab_character)
+            )
         if key == Key.Key_Backtab or (key == Key.Key_Tab and modifiers == Modifier.ShiftModifier):
+            if not settings.shift_tab_removes_indentation:
+                return lambda: None
             return lambda: self._apply_command(lambda lines, a, c: dedent(lines, a, c, rules))
-        if key in (Key.Key_Return, Key.Key_Enter) and modifiers in (Modifier.NoModifier, Modifier.ShiftModifier):
-            return lambda: self._apply_command(lambda lines, a, c: insert_newline(lines, a, c, rules))
-        if key == Key.Key_Slash and modifiers == Modifier.ControlModifier:
+        if (
+            key in (Key.Key_Return, Key.Key_Enter)
+            and modifiers in (Modifier.NoModifier, Modifier.ShiftModifier)
+            and settings.enter_keeps_indentation
+        ):
+            return lambda: self._apply_command(
+                lambda lines, a, c: insert_newline(
+                    lines, a, c, rules,
+                    indent_after_block_opening=settings.indent_after_block_opening,
+                    use_tab_character=use_tab_character,
+                )
+            )
+        if key == Key.Key_Slash and modifiers == Modifier.ControlModifier and settings.toggle_comment_command:
             return lambda: self._apply_command(lambda lines, a, c: toggle_comment(lines, a, c, rules))
-        if key == Key.Key_D and modifiers == Modifier.ControlModifier:
+        if key == Key.Key_D and modifiers == Modifier.ControlModifier and settings.duplicate_lines_command:
             return lambda: self._apply_command(duplicate_lines)
-        if key == Key.Key_K and modifiers == Modifier.ControlModifier | Modifier.ShiftModifier:
+        if (
+            key == Key.Key_K
+            and modifiers == Modifier.ControlModifier | Modifier.ShiftModifier
+            and settings.delete_lines_command
+        ):
             return lambda: self._apply_command(delete_lines)
-        if key in (Key.Key_Up, Key.Key_Down) and modifiers == Modifier.AltModifier:
+        if key in (Key.Key_Up, Key.Key_Down) and modifiers == Modifier.AltModifier and settings.move_lines_command:
             direction = -1 if key == Key.Key_Up else 1
             return lambda: self._apply_command(lambda lines, a, c: move_lines(lines, a, c, direction))
         return None
+
+    def _replace_selection_with_tab(self) -> None:
+        """Tab when it is not to indent every selected line: the selection, if any, becomes
+        what Tab inserts, worked out for where the selection starts."""
+        cursor = self.textCursor()
+        start = self._position_of(cursor.selectionStart())
+        line = self.document().findBlockByNumber(start.line).text()
+        cursor.insertText(
+            tab_insertion(line, start.column, self._rules, use_tab_character=not self._settings.tab_key_inserts_spaces)
+        )
+        self.setTextCursor(cursor)
 
     def _go_to_start_of_line(self, select: bool) -> None:
         cursor = self.textCursor()
