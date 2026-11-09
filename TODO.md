@@ -29,7 +29,7 @@ First version.
   - [x] Edit: Undo, Redo, Cut, Copy, Paste, Select all, Copy output, Edit startup file
 - [x] Prompt box (top, editable) and output box (bottom, read-only but selectable and copyable) with a draggable splitter; resizable window
 - [x] Dark, high-contrast theme (every text color is tested for at least 7:1 contrast; the syntax colors await approval)
-- [ ] Prompt box editing behaviors
+- [x] Prompt box editing behaviors
   - [x] Indentation guides (they run through blank lines and cover only the first row of a wrapped line)
   - [x] Tab inserts spaces; Shift+Tab dedents; Tab and Shift+Tab work on a selection
   - [x] Auto-indent after a colon
@@ -41,7 +41,7 @@ First version.
   - [x] Undo and redo
   - [x] Syntax highlighting; matching-bracket highlight
   - [x] Line numbers
-  - [ ] Find and replace as an inline bar (Ctrl+F, Ctrl+H, F3, Esc), prompt box only
+  - [x] Find and replace as an inline bar above the prompt box (Ctrl+F, Ctrl+H, Enter and Shift+Enter, F3 and Shift+F3, Esc or the close button), prompt box only; Match case, a match counter, every match highlighted, Replace and Replace all (one undo step)
   - [x] Zoom (Ctrl with +, - and 0, and Ctrl with the mouse wheel; both boxes together)
   - [x] Monospace font; word wrap on, toggled with Alt+Z in the box that has the focus
   - [x] No auto-closing brackets or quotes
@@ -55,6 +55,7 @@ First version.
   - [ ] Evaluate the irrational registry entries (Stefan-Boltzmann constant, parsec) from their formulas at any requested precision; the stored 100 digits are a floor, not the limit
   - [ ] Decide what Shift+click inserts for very long values (the two irrational entries have 100 digits)
 - [ ] Make the separators between menu groups easier to see in the dark theme (they are almost invisible; Fusion draws them faintly)
+- [ ] Find options: whole word and regular expressions (only Match case today)
 - [ ] Auto-indent after an opening bracket (today only a colon adds a level)
 - [ ] Make Enter quicker on very large prompts (it lexes every earlier line; 45 ms at 4,300 lines)
 - [ ] Languages other than Python (the interface always stays Python)

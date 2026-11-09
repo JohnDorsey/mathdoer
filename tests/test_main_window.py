@@ -54,7 +54,8 @@ def test_the_prompt_box_is_above_the_output_box_in_a_draggable_splitter(window):
     splitter = window.centralWidget()
     assert isinstance(splitter, QSplitter)
     assert splitter.orientation() == Qt.Orientation.Vertical
-    assert splitter.widget(0) is window.prompt_box
+    assert splitter.widget(0) is window.prompt_pane
+    assert window.prompt_box.parent() is window.prompt_pane
     assert splitter.widget(1) is window.output_box
     assert splitter.handleWidth() >= 4
     assert not splitter.childrenCollapsible()

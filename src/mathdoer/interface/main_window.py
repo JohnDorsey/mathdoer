@@ -12,7 +12,9 @@ from mathdoer.interface.edit_menu import EditMenu
 from mathdoer.interface.focus_tracker import ActiveBoxTracker
 from mathdoer.interface.fonts import DEFAULT_POINT_SIZE, clamp_point_size
 from mathdoer.interface.output_display import OutputDisplay
+from mathdoer.interface.find_bar import FindBar
 from mathdoer.interface.prompt_editor import PromptEditor
+from mathdoer.interface.prompt_pane import PromptPane
 from mathdoer.interface.registry_menus import add_registry_menus
 from mathdoer.interface.styling import apply_menu_theme, window_palette
 from mathdoer.interface.theme import DARK_THEME, Theme
@@ -35,6 +37,10 @@ ZOOM_IN_SHORTCUTS = ("Ctrl++", "Ctrl+=")  # the second needs no Shift on most ke
 ZOOM_OUT_SHORTCUT = "Ctrl+-"
 ZOOM_RESET_SHORTCUT = "Ctrl+0"
 WORD_WRAP_SHORTCUT = "Alt+Z"
+FIND_SHORTCUT = "Ctrl+F"
+REPLACE_SHORTCUT = "Ctrl+H"
+FIND_NEXT_SHORTCUT = "F3"
+FIND_PREVIOUS_SHORTCUT = "Shift+F3"
 
 CANCELLED_MARKER = "[cancelled]"
 
@@ -71,10 +77,11 @@ class MainWindow(QMainWindow):
         self.setPalette(window_palette(theme))
 
         self.prompt_box = PromptEditor(theme, run_settings.language)
+        self.prompt_pane = PromptPane(self.prompt_box, theme)
         self.output_box = OutputDisplay(theme)
 
         splitter = QSplitter(Qt.Orientation.Vertical)
-        splitter.addWidget(self.prompt_box)
+        splitter.addWidget(self.prompt_pane)
         splitter.addWidget(self.output_box)
         splitter.setChildrenCollapsible(False)
         splitter.setHandleWidth(SPLITTER_HANDLE_WIDTH)
@@ -101,6 +108,12 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence(ZOOM_OUT_SHORTCUT), self, activated=lambda: self.zoom_by(-1))
         QShortcut(QKeySequence(ZOOM_RESET_SHORTCUT), self, activated=lambda: self.set_font_size(DEFAULT_POINT_SIZE))
         QShortcut(QKeySequence(WORD_WRAP_SHORTCUT), self, activated=self.toggle_word_wrap)
+        QShortcut(QKeySequence(FIND_SHORTCUT), self, activated=self.find_bar.show_find)
+        QShortcut(QKeySequence(REPLACE_SHORTCUT), self, activated=self.find_bar.show_replace)
+        QShortcut(QKeySequence(FIND_NEXT_SHORTCUT), self, activated=lambda: self.find_bar.step_from_shortcut(True))
+        QShortcut(
+            QKeySequence(FIND_PREVIOUS_SHORTCUT), self, activated=lambda: self.find_bar.step_from_shortcut(False)
+        )
         for box in (self.prompt_box, self.output_box):
             box.zoom_requested.connect(self.zoom_by)
 
@@ -121,6 +134,10 @@ class MainWindow(QMainWindow):
     @property
     def startup_path(self) -> Path:
         return self._run_settings.startup_path
+
+    @property
+    def find_bar(self) -> FindBar:
+        return self.prompt_pane.find_bar
 
     @property
     def font_size(self) -> int:

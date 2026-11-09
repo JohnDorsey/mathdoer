@@ -24,6 +24,10 @@ class Theme:
     line_number_background: str
     indentation_guide: str  # Notepad++: "Indent guideline style"
     matching_bracket_background: str  # Notepad++: "Brace highlight style"
+    find_match_background: str  # Notepad++: "Smart Highlighting"; the text on it uses find_match_text
+    find_match_text: str
+    panel_background: str  # strips such as the find bar, which sit beside the text boxes
+    control_border: str  # the outline of a field on a panel
     # One color for each kind of text the lexer reports; Notepad++'s per-language styles
     # (COMMENTLINE, NUMBER, STRING, WORD, WORD2, DEFNAME, CLASSNAME, DECORATOR, OPERATOR) map to them.
     token_colors: Mapping[TokenKind, str]
@@ -45,6 +49,10 @@ DARK_THEME = Theme(
     line_number_background="#161616",
     indentation_guide="#606060",
     matching_bracket_background="#0c5c4e",
+    find_match_background="#ffd75f",
+    find_match_text="#000000",
+    panel_background="#161616",
+    control_border="#8a8a8a",
     token_colors={
         TokenKind.COMMENT: "#7ee787",
         TokenKind.STRING: "#ffb454",

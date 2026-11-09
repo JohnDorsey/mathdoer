@@ -85,6 +85,7 @@ class PromptEditor(TextBox):
         self._language = language
         self._rules = language.editing
         self._bracket_selections: list[QTextEdit.ExtraSelection] = []
+        self._search_selections: list[QTextEdit.ExtraSelection] = []
         self.gutter = _LineNumberGutter(self)
         self._highlighter = SyntaxHighlighter(self.document(), language, theme)
         self.blockCountChanged.connect(self._update_gutter_width)
@@ -111,14 +112,27 @@ class PromptEditor(TextBox):
                 start = self._qt_position_of(bracket)
                 selection = QTextEdit.ExtraSelection()
                 selection.format.setBackground(QColor(self._theme.matching_bracket_background))
+                selection.format.setForeground(QColor(self._theme.default_text))  # also on a found match
                 selection.cursor = QTextCursor(self.document())
                 selection.cursor.setPosition(start)
                 selection.cursor.setPosition(start + 1, QTextCursor.MoveMode.KeepAnchor)
                 self._bracket_selections.append(selection)
         self._refresh_extra_selections()
 
+    def set_search_highlights(self, matches: Sequence[QTextCursor]) -> None:
+        """Highlight the text each cursor selects, as the matches of a search."""
+        self._search_selections = []
+        for match in matches:
+            selection = QTextEdit.ExtraSelection()
+            selection.format.setBackground(QColor(self._theme.find_match_background))
+            selection.format.setForeground(QColor(self._theme.find_match_text))
+            selection.cursor = match
+            self._search_selections.append(selection)
+        self._refresh_extra_selections()
+
     def _refresh_extra_selections(self) -> None:
-        self.setExtraSelections(self._bracket_selections)
+        # The brackets come last, so they show over a found match.
+        self.setExtraSelections(self._search_selections + self._bracket_selections)
 
     def _lexer_state_before_line(self, index: int) -> int:
         """The state the highlighter left at the end of the line before, kept with that line."""

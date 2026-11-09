@@ -109,6 +109,39 @@ def test_indentation_guides_are_quieter_than_text():
     ) / 2
 
 
+def test_found_text_keeps_its_own_readable_colors_on_the_match_highlight():
+    ratio = contrast_ratio(DARK_THEME.find_match_text, DARK_THEME.find_match_background)
+    assert ratio >= MINIMUM_TEXT_CONTRAST, f"{ratio:.2f}"
+
+
+def test_the_match_highlight_is_unlike_the_selection_and_the_bracket_highlight():
+    background = DARK_THEME.find_match_background
+    assert background not in (
+        DARK_THEME.selection_background, DARK_THEME.matching_bracket_background, DARK_THEME.text_background,
+    )
+    assert contrast_ratio(background, DARK_THEME.text_background) >= MINIMUM_BOUNDARY_CONTRAST
+
+
+@pytest.mark.parametrize("text_color_name", ["default_text", "error_text", "notice_text"])
+def test_text_on_a_panel_is_as_easy_to_read_as_in_the_text_boxes(text_color_name):
+    ratio = contrast_ratio(getattr(DARK_THEME, text_color_name), DARK_THEME.panel_background)
+    assert ratio >= MINIMUM_TEXT_CONTRAST, f"{text_color_name}: {ratio:.2f}"
+
+
+def test_disabled_text_on_a_panel_is_easy_to_read_too():
+    assert contrast_ratio(DARK_THEME.disabled_text, DARK_THEME.panel_background) >= 4.5
+
+
+@pytest.mark.parametrize("background_name", ["panel_background", "text_background"])
+def test_the_border_of_a_control_stands_out_from_what_is_around_it(background_name):
+    ratio = contrast_ratio(DARK_THEME.control_border, getattr(DARK_THEME, background_name))
+    assert ratio >= MINIMUM_BOUNDARY_CONTRAST, f"{background_name}: {ratio:.2f}"
+
+
+def test_a_panel_is_set_apart_from_the_text_boxes():
+    assert DARK_THEME.panel_background != DARK_THEME.text_background
+
+
 def test_the_splitter_handle_stands_out_from_its_surroundings():
     for neighbour in (DARK_THEME.text_background, DARK_THEME.window_background):
         assert contrast_ratio(DARK_THEME.splitter_handle, neighbour) >= MINIMUM_BOUNDARY_CONTRAST
