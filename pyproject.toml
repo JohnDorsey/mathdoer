@@ -1,0 +1,28 @@
+[project]
+name = "mathdoer"
+version = "0.1.0"
+description = "A calculator that executes the Python code you type"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [{ name = "John Dorsey" }]
+requires-python = ">=3.11"
+dependencies = [
+    "pyside6-essentials>=6.12.0",
+]
+
+[project.scripts]
+mathdoer = "mathdoer:main"
+
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "pytest-qt>=4.5.0",
+]

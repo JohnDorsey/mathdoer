@@ -1,0 +1,502 @@
+# Constants and units offered by the Constants and Units menus.
+#
+# Every constant and unit is a value in SI base or derived units: a unit's value is how
+# many SI units one of it makes (INCH is 0.0254 metres). Labels and the menu order match
+# PrecCalc64; labels are clarified where PrecCalc64's are ambiguous; names are
+# SCREAMING_SNAKE_CASE and carry the definition when the plain word has several meanings.
+# Values keep the greatest precision that is definitely correct; nothing is rounded to
+# fit a number type.
+#
+# value  A decimal number or a ratio of two decimal numbers, as text.
+# basis  exact:    the stored text is the exact value.
+#        rounded:  exactly defined but not a finite decimal; the stored digits are rounded.
+#        measured: carries an uncertainty.
+# source Where the value comes from.
+
+format_version = 1
+
+
+# ------------------------------------------------------------------- constants
+# Measured values are CODATA 2022. Exact values are defined by the 2019 SI redefinition
+# or follow exactly from defined constants.
+
+[[constants]]
+name = "SPEED_OF_LIGHT"
+label = "Speed of light"
+unit = "m/s"
+value = "299792458"
+basis = "exact"
+source = "SI definition of the metre"
+
+[[constants]]
+name = "STANDARD_GRAVITY"
+label = "Standard gravity"
+unit = "m/s^2"
+value = "9.80665"
+basis = "exact"
+source = "Standard acceleration of gravity, 3rd General Conference on Weights and Measures (1901)"
+
+[[constants]]
+name = "GRAVITATIONAL_CONSTANT"
+label = "Gravitational constant"
+unit = "m^3/s^2.kg"
+value = "6.6743e-11"
+basis = "measured"
+source = "CODATA 2022"
+
+[[constants]]
+name = "AVOGADRO_CONSTANT"
+label = "Avogadro constant"
+unit = "1/mol"
+value = "6.02214076e23"
+basis = "exact"
+source = "SI definition of the mole"
+
+[[constants]]
+name = "MOLAR_GAS_CONSTANT"
+label = "Molar gas constant (universal gas constant)"
+unit = "J/mol.K"
+value = "8.31446261815324"
+basis = "exact"
+source = "Avogadro constant times Boltzmann constant"
+
+[[constants]]
+name = "MOLAR_VOLUME_OF_IDEAL_GAS_273_15_KELVIN_100_KILOPASCAL"
+label = "Molar volume of ideal gas (273.15 K, 100 kPa)"
+unit = "m^3/mol"
+value = "0.02271095464148557506"
+basis = "exact"
+source = "Ideal gas at 273.15 K and 100 kPa: molar gas constant times 273.15 K divided by 100 kPa"
+
+[[constants]]
+name = "VACUUM_PERMITTIVITY"
+label = "Permittivity of vacuum"
+unit = "F/m"
+value = "8.8541878188e-12"
+basis = "measured"
+source = "CODATA 2022"
+
+[[constants]]
+name = "VACUUM_PERMEABILITY"
+label = "Permeability of vacuum"
+unit = "H/m"
+value = "1.25663706127e-6"
+basis = "measured"
+source = "CODATA 2022"
+
+[[constants]]
+name = "FARADAY_CONSTANT"
+label = "Faraday constant"
+unit = "C/mol"
+value = "96485.3321233100184"
+basis = "exact"
+source = "Avogadro constant times elementary charge"
+
+[[constants]]
+name = "ELEMENTARY_CHARGE"
+label = "Elementary charge"
+unit = "C"
+value = "1.602176634e-19"
+basis = "exact"
+source = "SI definition of the ampere"
+
+[[constants]]
+name = "ATOMIC_MASS_CONSTANT"
+label = "Atomic mass constant (unified atomic mass unit)"
+unit = "kg"
+value = "1.66053906892e-27"
+basis = "measured"
+source = "CODATA 2022"
+
+[[constants]]
+name = "ELECTRON_MASS"
+label = "Electron mass"
+unit = "kg"
+value = "9.1093837139e-31"
+basis = "measured"
+source = "CODATA 2022"
+
+[[constants]]
+name = "PROTON_MASS"
+label = "Proton mass"
+unit = "kg"
+value = "1.67262192595e-27"
+basis = "measured"
+source = "CODATA 2022"
+
+[[constants]]
+name = "NEUTRON_MASS"
+label = "Neutron mass"
+unit = "kg"
+value = "1.67492750056e-27"
+basis = "measured"
+source = "CODATA 2022"
+
+[[constants]]
+name = "RYDBERG_CONSTANT"
+label = "Rydberg constant"
+unit = "1/m"
+value = "10973731.568157"
+basis = "measured"
+source = "CODATA 2022"
+
+[[constants]]
+name = "PLANCK_CONSTANT"
+label = "Planck constant"
+unit = "J.s"
+value = "6.62607015e-34"
+basis = "exact"
+source = "SI definition of the kilogram"
+
+[[constants]]
+name = "BOLTZMANN_CONSTANT"
+label = "Boltzmann constant"
+unit = "J/K"
+value = "1.380649e-23"
+basis = "exact"
+source = "SI definition of the kelvin"
+
+[[constants]]
+name = "STEFAN_BOLTZMANN_CONSTANT"
+label = "Stefan-Boltzmann constant"
+unit = "W/m^2.K^4"
+value = "5.670374419184429453970996731889230875840122970291303682405461737053948160626523326082571857770446887e-8"
+basis = "rounded"
+source = "2 pi^5 k^4 / (15 h^3 c^2) from exact constants; irrational, rounded to 100 significant digits"
+
+[[constants]]
+name = "BOHR_MAGNETON"
+label = "Bohr magneton"
+unit = "J/T"
+value = "9.2740100657e-24"
+basis = "measured"
+source = "CODATA 2022"
+
+[[constants]]
+name = "NUCLEAR_MAGNETON"
+label = "Nuclear magneton"
+unit = "J/T"
+value = "5.0507837393e-27"
+basis = "measured"
+source = "CODATA 2022"
+
+
+# ----------------------------------------------------------------------- units
+# The values are in metres, square metres, cubic metres, kilograms, joules, watts,
+# pascals, metres per second and seconds.
+
+# Length
+
+[[units]]
+name = "ANGSTROM"
+label = "angstrom"
+category = "Length"
+value = "1e-10"
+basis = "exact"
+source = "Definition: 10^-10 metre"
+
+[[units]]
+name = "INCH"
+label = "inch"
+category = "Length"
+value = "0.0254"
+basis = "exact"
+source = "International yard and pound agreement (1959)"
+
+[[units]]
+name = "FOOT"
+label = "foot"
+category = "Length"
+value = "0.3048"
+basis = "exact"
+source = "International yard and pound agreement (1959): 12 inches"
+
+[[units]]
+name = "YARD"
+label = "yard"
+category = "Length"
+value = "0.9144"
+basis = "exact"
+source = "International yard and pound agreement (1959)"
+
+[[units]]
+name = "MILE"
+label = "mile"
+category = "Length"
+value = "1609.344"
+basis = "exact"
+source = "International mile: 1760 yards (the US survey mile differs by 2 parts per million)"
+
+[[units]]
+name = "NAUTICAL_MILE"
+label = "nautical mile"
+category = "Length"
+value = "1852"
+basis = "exact"
+source = "International nautical mile (1929)"
+
+[[units]]
+name = "ASTRONOMICAL_UNIT"
+label = "astronomical unit"
+category = "Length"
+value = "149597870700"
+basis = "exact"
+source = "IAU 2012 Resolution B2"
+
+[[units]]
+name = "LIGHT_YEAR"
+label = "light-year"
+category = "Length"
+value = "9460730472580800"
+basis = "exact"
+source = "Distance light travels in 365.25 days of 86400 seconds"
+
+[[units]]
+name = "PARSEC"
+label = "parsec"
+category = "Length"
+value = "3.085677581491367278913937957796471610731921160409179801404019227702329218699929686983213533880655599e16"
+basis = "rounded"
+source = "IAU 2015 Resolution B2: 648000/pi astronomical units; irrational, rounded to 100 significant digits"
+
+# Area
+
+[[units]]
+name = "SQUARE_INCH"
+label = "square inch"
+category = "Area"
+value = "0.00064516"
+basis = "exact"
+source = "Inch squared"
+
+[[units]]
+name = "SQUARE_FOOT"
+label = "square foot"
+category = "Area"
+value = "0.09290304"
+basis = "exact"
+source = "Foot squared"
+
+[[units]]
+name = "SQUARE_YARD"
+label = "square yard"
+category = "Area"
+value = "0.83612736"
+basis = "exact"
+source = "Yard squared"
+
+[[units]]
+name = "ACRE"
+label = "acre"
+category = "Area"
+value = "4046.8564224"
+basis = "exact"
+source = "International acre: 43560 square feet (the US survey acre differs by 2 parts per million)"
+
+[[units]]
+name = "SQUARE_MILE"
+label = "square mile"
+category = "Area"
+value = "2589988.110336"
+basis = "exact"
+source = "International mile squared"
+
+# Volume
+
+[[units]]
+name = "UK_FLUID_OUNCE"
+label = "fluid ounce (UK)"
+category = "Volume"
+value = "2.84130625e-5"
+basis = "exact"
+source = "Imperial fluid ounce: 1/160 imperial gallon"
+
+[[units]]
+name = "US_FLUID_OUNCE"
+label = "fluid ounce (US)"
+category = "Volume"
+value = "2.95735295625e-5"
+basis = "exact"
+source = "US customary fluid ounce: 1/128 US gallon"
+
+[[units]]
+name = "UK_PINT"
+label = "pint (UK)"
+category = "Volume"
+value = "5.6826125e-4"
+basis = "exact"
+source = "Imperial pint: 1/8 imperial gallon"
+
+[[units]]
+name = "UK_GALLON"
+label = "gallon (UK)"
+category = "Volume"
+value = "4.54609e-3"
+basis = "exact"
+source = "Imperial gallon: 4.54609 litres"
+
+[[units]]
+name = "US_GALLON"
+label = "gallon (US)"
+category = "Volume"
+value = "3.785411784e-3"
+basis = "exact"
+source = "US liquid gallon: 231 cubic inches"
+
+[[units]]
+name = "OIL_BARREL"
+label = "barrel (petroleum, 42 US gallons)"
+category = "Volume"
+value = "0.158987294928"
+basis = "exact"
+source = "Petroleum barrel: 42 US gallons"
+
+# Mass
+
+[[units]]
+name = "AVOIRDUPOIS_OUNCE"
+label = "ounce (avoirdupois)"
+category = "Mass"
+value = "0.028349523125"
+basis = "exact"
+source = "Avoirdupois ounce: 1/16 pound (not the troy ounce)"
+
+[[units]]
+name = "AVOIRDUPOIS_POUND"
+label = "pound (avoirdupois)"
+category = "Mass"
+value = "0.45359237"
+basis = "exact"
+source = "International yard and pound agreement (1959)"
+
+# Energy
+
+[[units]]
+name = "ERG"
+label = "erg"
+category = "Energy"
+value = "1e-7"
+basis = "exact"
+source = "Definition: 10^-7 joule"
+
+[[units]]
+name = "INTERNATIONAL_TABLE_CALORIE"
+label = "calorie (International Table)"
+category = "Energy"
+value = "4.1868"
+basis = "exact"
+source = "International Table calorie (the thermochemical calorie is 4.184 joules)"
+
+# Power
+
+[[units]]
+name = "METRIC_HORSEPOWER"
+label = "horsepower (metric)"
+category = "Power"
+value = "735.49875"
+basis = "exact"
+source = "Metric horsepower: 75 kilogram-force metres per second"
+
+[[units]]
+name = "MECHANICAL_HORSEPOWER"
+label = "horsepower (mechanical)"
+category = "Power"
+value = "745.69987158227022"
+basis = "exact"
+source = "Mechanical (imperial) horsepower: 550 foot pound-force per second"
+
+# Pressure
+
+[[units]]
+name = "STANDARD_ATMOSPHERE"
+label = "standard atmosphere"
+category = "Pressure"
+value = "101325"
+basis = "exact"
+source = "Standard atmosphere, 10th General Conference on Weights and Measures (1954)"
+
+[[units]]
+name = "TORR"
+label = "Torr (1/760 of a standard atmosphere)"
+category = "Pressure"
+value = "101325/760"
+basis = "exact"
+source = "1/760 of a standard atmosphere (conventional millimetre of mercury is 133.322387415 pascals)"
+
+[[units]]
+name = "CONVENTIONAL_MILLIMETER_OF_WATER"
+label = "millimeter of water (conventional)"
+category = "Pressure"
+value = "9.80665"
+basis = "exact"
+source = "Conventional millimetre of water: 1 kilogram-force per square metre"
+
+# Speed
+
+[[units]]
+name = "KILOMETER_PER_HOUR"
+label = "kilometer per hour"
+category = "Speed"
+value = "1000/3600"
+basis = "exact"
+source = "1000 metres per 3600 seconds"
+
+[[units]]
+name = "KNOT"
+label = "knot (nautical mile per hour)"
+category = "Speed"
+value = "1852/3600"
+basis = "exact"
+source = "One nautical mile per hour"
+
+# Time
+# The astronomical years and months are means and vary slowly; the values below are in
+# seconds, converted from the cited number of days of 86400 seconds.
+
+[[units]]
+name = "SIDEREAL_DAY"
+label = "sidereal day"
+category = "Time"
+value = "86400/1.002737909350795"
+basis = "exact"
+source = "IERS conventional duration of the sidereal day (Aoki et al. 1982): 86400 s over the exact Earth rotation ratio 1.002737909350795"
+
+[[units]]
+name = "CALENDAR_DAY"
+label = "calendar day"
+category = "Time"
+value = "86400"
+basis = "exact"
+source = "86400 SI seconds"
+
+[[units]]
+name = "SIDEREAL_MONTH"
+label = "sidereal month"
+category = "Time"
+value = "2360591.55792"
+basis = "measured"
+source = "27.32166155 days, mean motion of the Moon (IERS Conventions 2003)"
+
+[[units]]
+name = "SYNODIC_MONTH"
+label = "synodic month"
+category = "Time"
+value = "2551442.8775904"
+basis = "measured"
+source = "29.530588861 days, mean synodic month (Meeus, Astronomical Algorithms, chapter 49)"
+
+[[units]]
+name = "SIDEREAL_YEAR"
+label = "sidereal year"
+category = "Time"
+value = "31558149.7635456"
+basis = "measured"
+source = "365.256363004 days (Simon et al. 1994, via the IERS constants page)"
+
+[[units]]
+name = "TROPICAL_YEAR"
+label = "tropical year"
+category = "Time"
+value = "31556925.2507328"
+basis = "measured"
+source = "365.242190402 days (Simon et al. 1994, via the IERS constants page)"
