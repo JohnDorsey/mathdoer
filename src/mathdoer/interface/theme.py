@@ -17,6 +17,9 @@ class Theme:
     selection_background: str
     selection_text: str
     splitter_handle: str
+    line_number_text: str  # Notepad++: "Line number margin"
+    line_number_background: str
+    indentation_guide: str  # Notepad++: "Indent guideline style"
 
 
 # Dark with high contrast: every text color is at least 7:1 against its background.
@@ -31,6 +34,9 @@ DARK_THEME = Theme(
     selection_background="#1a4fa0",
     selection_text="#ffffff",
     splitter_handle="#8a8a8a",
+    line_number_text="#b0b0b0",
+    line_number_background="#161616",
+    indentation_guide="#606060",
 )
 
 

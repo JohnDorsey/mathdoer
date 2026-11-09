@@ -50,6 +50,25 @@ def test_disabled_text_is_not_confused_with_normal_text():
     assert DARK_THEME.disabled_text != DARK_THEME.default_text
 
 
+def test_line_numbers_are_as_easy_to_read_as_the_text():
+    ratio = contrast_ratio(DARK_THEME.line_number_text, DARK_THEME.line_number_background)
+    assert ratio >= MINIMUM_TEXT_CONTRAST, f"{ratio:.2f}"
+
+
+def test_the_line_number_margin_is_set_apart_from_the_text():
+    assert DARK_THEME.line_number_background != DARK_THEME.text_background
+
+
+def test_indentation_guides_stand_out_from_the_text_background():
+    assert contrast_ratio(DARK_THEME.indentation_guide, DARK_THEME.text_background) >= MINIMUM_BOUNDARY_CONTRAST
+
+
+def test_indentation_guides_are_quieter_than_text():
+    assert contrast_ratio(DARK_THEME.indentation_guide, DARK_THEME.text_background) < contrast_ratio(
+        DARK_THEME.default_text, DARK_THEME.text_background
+    ) / 2
+
+
 def test_the_splitter_handle_stands_out_from_its_surroundings():
     for neighbour in (DARK_THEME.text_background, DARK_THEME.window_background):
         assert contrast_ratio(DARK_THEME.splitter_handle, neighbour) >= MINIMUM_BOUNDARY_CONTRAST

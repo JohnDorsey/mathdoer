@@ -9,6 +9,8 @@ from PySide6.QtWidgets import QMainWindow, QSplitter
 
 from mathdoer import text_editor
 from mathdoer.interface.edit_menu import EditMenu
+from mathdoer.interface.focus_tracker import ActiveBoxTracker
+from mathdoer.interface.fonts import DEFAULT_POINT_SIZE, clamp_point_size
 from mathdoer.interface.output_display import OutputDisplay
 from mathdoer.interface.prompt_editor import PromptEditor
 from mathdoer.interface.registry_menus import add_registry_menus
@@ -29,6 +31,10 @@ POLL_INTERVAL_MILLISECONDS = 30
 
 RUN_SHORTCUTS = ("Ctrl+Return", "Ctrl+Enter")  # Enter on the keypad is Ctrl+Enter
 CANCEL_SHORTCUT = "Shift+Esc"
+ZOOM_IN_SHORTCUTS = ("Ctrl++", "Ctrl+=")  # the second needs no Shift on most keyboards
+ZOOM_OUT_SHORTCUT = "Ctrl+-"
+ZOOM_RESET_SHORTCUT = "Ctrl+0"
+WORD_WRAP_SHORTCUT = "Alt+Z"
 
 CANCELLED_MARKER = "[cancelled]"
 
@@ -58,6 +64,7 @@ class MainWindow(QMainWindow):
         self._run: Run | None = None
         self._run_started_at = 0.0
         self._shown_progress_text: str | None = None
+        self._font_size = DEFAULT_POINT_SIZE
 
         self.setWindowTitle(WINDOW_TITLE)
         self.resize(*INITIAL_WINDOW_SIZE)
@@ -75,8 +82,9 @@ class MainWindow(QMainWindow):
         splitter.setStyleSheet(f"QSplitter::handle {{ background: {theme.splitter_handle}; }}")
         self.setCentralWidget(splitter)
 
+        self._active_box = ActiveBoxTracker((self.prompt_box, self.output_box))
         self._edit_menu = EditMenu(
-            self.menuBar(), self.prompt_box, self.output_box, self._edit_startup_file
+            self.menuBar(), self.prompt_box, self.output_box, self._active_box, self._edit_startup_file
         )
         add_registry_menus(
             self.menuBar(),
@@ -88,6 +96,13 @@ class MainWindow(QMainWindow):
         for sequence in RUN_SHORTCUTS:
             QShortcut(QKeySequence(sequence), self, activated=self.run_prompt)
         QShortcut(QKeySequence(CANCEL_SHORTCUT), self, activated=self.cancel_run)
+        for sequence in ZOOM_IN_SHORTCUTS:
+            QShortcut(QKeySequence(sequence), self, activated=lambda: self.zoom_by(1))
+        QShortcut(QKeySequence(ZOOM_OUT_SHORTCUT), self, activated=lambda: self.zoom_by(-1))
+        QShortcut(QKeySequence(ZOOM_RESET_SHORTCUT), self, activated=lambda: self.set_font_size(DEFAULT_POINT_SIZE))
+        QShortcut(QKeySequence(WORD_WRAP_SHORTCUT), self, activated=self.toggle_word_wrap)
+        for box in (self.prompt_box, self.output_box):
+            box.zoom_requested.connect(self.zoom_by)
 
         self._timer = QTimer(self)
         self._timer.setInterval(POLL_INTERVAL_MILLISECONDS)
@@ -106,6 +121,23 @@ class MainWindow(QMainWindow):
     @property
     def startup_path(self) -> Path:
         return self._run_settings.startup_path
+
+    @property
+    def font_size(self) -> int:
+        return self._font_size
+
+    def set_font_size(self, point_size: int) -> None:
+        """Both boxes always have the same font size."""
+        self._font_size = clamp_point_size(point_size)
+        for box in (self.prompt_box, self.output_box):
+            box.set_font_size(self._font_size)
+
+    def zoom_by(self, steps: int) -> None:
+        self.set_font_size(self._font_size + steps)
+
+    def toggle_word_wrap(self) -> None:
+        """Turn word wrap on or off in the box that has the focus."""
+        self._active_box.active_box().toggle_word_wrap()
 
     def _insert_registry_entry(self, entry: RegistryEntry) -> None:
         """Insert the entry's name, or its literal value when Shift is held."""

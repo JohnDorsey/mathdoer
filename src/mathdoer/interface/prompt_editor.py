@@ -1,9 +1,12 @@
 """The prompt box: a text box that edits code the way a code editor does."""
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
+from typing import NamedTuple
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QKeyEvent, QTextCursor, QTextDocument
+from PySide6.QtCore import QEvent, QRect, QSize, Qt
+from PySide6.QtGui import QColor, QKeyEvent, QPainter, QPaintEvent, QResizeEvent, QTextBlock, QTextCursor, QTextDocument
+from PySide6.QtWidgets import QWidget
 
+from mathdoer.indentation_guides import guide_columns
 from mathdoer.interface.text_box import TextBox
 from mathdoer.interface.theme import Theme
 from mathdoer.languages import Language
@@ -23,6 +26,19 @@ from mathdoer.utf16 import index_at_utf16_offset, utf16_length
 
 Key = Qt.Key
 Modifier = Qt.KeyboardModifier
+
+GUTTER_PADDING = 8  # pixels on each side of the line numbers
+MINIMUM_GUTTER_DIGITS = 3  # so the gutter does not change width until a thousand lines
+
+
+class IndentationGuide(NamedTuple):
+    """One guide: the line it is on, the column it stands in, and where it is in the viewport."""
+
+    line: int
+    column: int
+    x: int
+    top: int
+    bottom: int
 
 
 class _DocumentLines(Sequence[str]):
@@ -44,11 +60,131 @@ class _DocumentLines(Sequence[str]):
         return self._document.findBlockByNumber(index).text()
 
 
+class _LineNumberGutter(QWidget):
+    """The strip to the left of the text that shows the line numbers. The editor paints it."""
+
+    def __init__(self, editor: "PromptEditor"):
+        super().__init__(editor)
+        self._editor = editor
+
+    def sizeHint(self) -> QSize:
+        return QSize(self._editor.gutter_width(), 0)
+
+    def paintEvent(self, event: QPaintEvent) -> None:
+        self._editor.paint_gutter(event)
+
+
 class PromptEditor(TextBox):
+    _ready = False  # set once everything the font-change handler uses exists
+
     def __init__(self, theme: Theme, language: Language, parent=None):
         super().__init__(theme, parent)
+        self._theme = theme
         self._rules = language.editing
+        self.gutter = _LineNumberGutter(self)
+        self.blockCountChanged.connect(self._update_gutter_width)
+        self.updateRequest.connect(self._scroll_gutter)
+        self._ready = True
+        self._font_changed()
+
+    # ------------------------------------------------------------ line numbers
+
+    def gutter_width(self) -> int:
+        digits = max(MINIMUM_GUTTER_DIGITS, len(str(max(1, self.blockCount()))))
+        return 2 * GUTTER_PADDING + digits * self.fontMetrics().horizontalAdvance("9")
+
+    def visible_line_numbers(self) -> list[int]:
+        return [block.blockNumber() + 1 for block, _, _ in self._visible_blocks()]
+
+    def paint_gutter(self, event: QPaintEvent) -> None:
+        painter = QPainter(self.gutter)
+        painter.fillRect(event.rect(), QColor(self._theme.line_number_background))
+        painter.setPen(QColor(self._theme.line_number_text))
+        painter.setFont(self.font())
+        alignment = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        for block, top, bottom in self._visible_blocks():
+            if bottom < event.rect().top() or top > event.rect().bottom():
+                continue
+            painter.drawText(
+                0, top, self.gutter.width() - GUTTER_PADDING, self._first_row_height(block),
+                alignment, str(block.blockNumber() + 1),
+            )
+
+    def _update_gutter_width(self) -> None:
+        width = self.gutter_width()
+        if self.viewportMargins().left() != width:
+            self.setViewportMargins(width, 0, 0, 0)
+        self._place_gutter()
+
+    def _place_gutter(self) -> None:
+        contents = self.contentsRect()
+        self.gutter.setGeometry(QRect(contents.left(), contents.top(), self.gutter_width(), contents.height()))
+
+    def _scroll_gutter(self, rect: QRect, scrolled_by: int) -> None:
+        if scrolled_by:
+            self.gutter.scroll(0, scrolled_by)
+        else:
+            self.gutter.update(0, rect.y(), self.gutter.width(), rect.height())
+        if rect.contains(self.viewport().rect()):
+            self._update_gutter_width()
+
+    # ------------------------------------------------------- indentation guides
+
+    def visible_indentation_guides(self) -> list[IndentationGuide]:
+        lines = _DocumentLines(self.document())
+        space_width = self.fontMetrics().horizontalAdvance(" ")
+        left = self.contentOffset().x() + self.document().documentMargin()
+        guides = []
+        for block, top, _ in self._visible_blocks():
+            # On a wrapped line only the first row has the indentation; the rest start at the margin.
+            bottom = top + self._first_row_height(block)
+            for column in guide_columns(lines, block.blockNumber(), self._rules.indent_width):
+                guides.append(
+                    IndentationGuide(block.blockNumber(), column, round(left + column * space_width), top, bottom)
+                )
+        return guides
+
+    def paintEvent(self, event: QPaintEvent) -> None:
+        super().paintEvent(event)
+        painter = QPainter(self.viewport())
+        painter.setPen(QColor(self._theme.indentation_guide))
+        for guide in self.visible_indentation_guides():
+            painter.drawLine(guide.x, guide.top, guide.x, guide.bottom - 1)
+
+    # ---------------------------------------------------------------- the blocks
+
+    def _visible_blocks(self) -> Iterator[tuple[QTextBlock, int, int]]:
+        """The blocks (lines) in view, each with the top and bottom of all its rows in the viewport."""
+        block = self.firstVisibleBlock()
+        top = round(self.blockBoundingGeometry(block).translated(self.contentOffset()).top())
+        viewport_height = self.viewport().height()
+        while block.isValid() and top <= viewport_height:
+            bottom = top + round(self.blockBoundingRect(block).height())
+            if block.isVisible():
+                yield block, top, bottom
+            block = block.next()
+            top = bottom
+
+    def _first_row_height(self, block: QTextBlock) -> int:
+        layout = block.layout()
+        if layout is not None and layout.lineCount() > 0:
+            return round(layout.lineAt(0).height())
+        return round(self.blockBoundingRect(block).height())
+
+    # ------------------------------------------------------------ size and font
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        super().resizeEvent(event)
+        self._place_gutter()
+
+    def changeEvent(self, event: QEvent) -> None:
+        super().changeEvent(event)
+        if event.type() == QEvent.Type.FontChange and self._ready:
+            self._font_changed()
+
+    def _font_changed(self) -> None:
         self.setTabStopDistance(self._rules.indent_width * self.fontMetrics().horizontalAdvance(" "))
+        self._update_gutter_width()
 
     # ------------------------------------------------------------------------ keys
 

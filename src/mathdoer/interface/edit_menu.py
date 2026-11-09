@@ -2,24 +2,26 @@
 from collections.abc import Callable
 
 from PySide6.QtGui import QAction, QGuiApplication
-from PySide6.QtWidgets import QApplication, QMenuBar, QPlainTextEdit, QWidget
+from PySide6.QtWidgets import QMenuBar, QPlainTextEdit
+
+from mathdoer.interface.focus_tracker import ActiveBoxTracker
 
 
 class EditMenu:
     """Undo, redo, cut and paste act on the prompt box, the only box that can be edited.
-    Copy and select all act on the box that last had the focus."""
+    Copy and select all act on the box the tracker says is active."""
 
     def __init__(
         self,
         menu_bar: QMenuBar,
         prompt_box: QPlainTextEdit,
         output_box: QPlainTextEdit,
+        tracker: ActiveBoxTracker,
         edit_startup_file: Callable[[], None],
     ):
         self._prompt_box = prompt_box
         self._output_box = output_box
-        self._last_focused_box = prompt_box
-        QApplication.instance().focusChanged.connect(self._remember_focused_box)
+        self._tracker = tracker
 
         self.menu = menu_bar.addMenu("Edit")
         self._undo = self._add("Undo", "Ctrl+Z", self._undo_in_prompt)
@@ -43,18 +45,8 @@ class EditMenu:
         self.menu.addAction(action)
         return action
 
-    def _remember_focused_box(self, old: QWidget | None, new: QWidget | None) -> None:
-        if new is self._prompt_box or new is self._output_box:
-            self._last_focused_box = new
-
-    def _active_box(self) -> QPlainTextEdit:
-        focused = QApplication.focusWidget()
-        if focused is self._prompt_box or focused is self._output_box:
-            return focused
-        return self._last_focused_box
-
     def _update_enabled_states(self) -> None:
-        active = self._active_box()
+        active = self._tracker.active_box()
         document = self._prompt_box.document()
         self._undo.setEnabled(document.isUndoAvailable())
         self._redo.setEnabled(document.isRedoAvailable())
@@ -77,7 +69,7 @@ class EditMenu:
         self._prompt_box.setFocus()
 
     def _copy_from_active_box(self) -> None:
-        box = self._active_box()
+        box = self._tracker.active_box()
         box.copy()
         box.setFocus()
 
@@ -86,7 +78,7 @@ class EditMenu:
         self._prompt_box.setFocus()
 
     def _select_all_in_active_box(self) -> None:
-        box = self._active_box()
+        box = self._tracker.active_box()
         box.selectAll()
         box.setFocus()
 
