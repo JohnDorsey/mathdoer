@@ -7,8 +7,6 @@
 # this line, prompts run on the Python that mathdoer itself runs on, which has no extra
 # packages, so set it to a Python that has the ones you want, such as numpy or sympy.
 #
-# Give the full path of the program. A bare name such as py is looked up on the PATH that
-# mathdoer was started with, which can begin with a virtual environment's folder, so it may
-# not find the Python you expect. Put single quotes around a Windows path so that its
-# backslashes are taken literally.
+# Give the full path of the program, or the name of one that is on your PATH. Put single
+# quotes around a Windows path so that its backslashes are taken literally.
 # interpreter = 'C:\Python311\python.exe'

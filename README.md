@@ -48,7 +48,7 @@ The one setting is `interpreter`, the Python that runs your prompts (3.11 or lat
 interpreter = 'C:\Python311\python.exe'
 ```
 
-Use single quotes around a Windows path so its backslashes are taken literally. Give the full path: a bare name such as `py` is looked up on the PATH that mathdoer was started with, and `uv run` puts the project's own environment first on that PATH.
+Give the full path of the program, or the name of one on your PATH, such as `py`. Use single quotes around a Windows path so its backslashes are taken literally. A run does not inherit the virtual environment that mathdoer itself runs in (`uv run` activates one), so `py`, `python` and the Windows `python3.exe` alias reach the Python they stand for.
 
 ## License
 

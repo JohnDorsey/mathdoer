@@ -28,6 +28,7 @@ from enum import Enum
 from pathlib import Path
 
 from mathdoer.languages import Language
+from mathdoer.run_environment import SEARCH_PATH_VARIABLE, create_run_environment
 from mathdoer.user_settings import UserSettingsError, resolve_interpreter
 
 EXIT_CODE_COMPLETED = 0
@@ -93,7 +94,11 @@ class RunSettings:
         """Read the settings file, then start a run. A problem in the settings file raises
         nothing: the run has already ended, with the explanation as error text."""
         try:
-            interpreter_path = resolve_interpreter(self.settings_path, self.default_interpreter_path)
+            interpreter_path = resolve_interpreter(
+                self.settings_path,
+                self.default_interpreter_path,
+                create_run_environment().get(SEARCH_PATH_VARIABLE),
+            )
         except UserSettingsError as error:
             return Run.failed_to_start(str(error))
         return Run(
@@ -121,7 +126,7 @@ class Run:
     ):
         self._set_up_state()
         command = language.build_worker_command(Path(interpreter_path))
-        environment = {**os.environ, REGISTRY_ENVIRONMENT_VARIABLE: str(registry_path)}
+        environment = {**create_run_environment(), REGISTRY_ENVIRONMENT_VARIABLE: str(registry_path)}
         try:
             self._process = subprocess.Popen(
                 command,

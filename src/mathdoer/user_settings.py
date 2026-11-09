@@ -24,9 +24,12 @@ class UserSettingsError(Exception):
     and says what to change."""
 
 
-def resolve_interpreter(settings_path: Path, default_interpreter_path: Path) -> Path:
+def resolve_interpreter(
+    settings_path: Path, default_interpreter_path: Path, search_path: str | None = None
+) -> Path:
     """The interpreter the settings file names, or the default when it does not name one
-    (including when there is no settings file). Raises UserSettingsError."""
+    (including when there is no settings file). A name without a folder is looked up on the
+    search path given, or on the one of this process. Raises UserSettingsError."""
     settings = _read_settings(settings_path)
     unknown_settings = sorted(name for name in settings if name not in KNOWN_SETTINGS)
     if unknown_settings:
@@ -35,7 +38,7 @@ def resolve_interpreter(settings_path: Path, default_interpreter_path: Path) -> 
         raise UserSettingsError(f"Unknown setting {names} in {settings_path}. The settings are: {known}.")
     if INTERPRETER_SETTING not in settings:
         return default_interpreter_path
-    return _find_interpreter(settings[INTERPRETER_SETTING], settings_path)
+    return _find_interpreter(settings[INTERPRETER_SETTING], settings_path, search_path)
 
 
 def _read_settings(settings_path: Path) -> dict:
@@ -51,7 +54,7 @@ def _read_settings(settings_path: Path) -> dict:
         raise UserSettingsError(f"Cannot read the settings file {settings_path}: {error}") from error
 
 
-def _find_interpreter(value: object, settings_path: Path) -> Path:
+def _find_interpreter(value: object, settings_path: Path, search_path: str | None) -> Path:
     if not isinstance(value, str):
         raise UserSettingsError(
             f"The setting '{INTERPRETER_SETTING}' in {settings_path} must be text in quotes, not {value!r}."
@@ -62,7 +65,7 @@ def _find_interpreter(value: object, settings_path: Path) -> Path:
             f"The setting '{INTERPRETER_SETTING}' in {settings_path} is empty. "
             "Remove the line to use the default interpreter."
         )
-    found = shutil.which(name)
+    found = shutil.which(name, path=search_path)
     if found is None:
         raise UserSettingsError(
             f"The interpreter '{name}' set in {settings_path} was not found. "

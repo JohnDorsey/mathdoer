@@ -119,6 +119,51 @@ def test_the_settings_file_is_read_again_at_the_start_of_every_run(
     assert "".join(event.text for event in default.poll() if isinstance(event, OutputText)) == "None\n"
 
 
+# ---------------------------------- the run does not inherit our virtual environment
+
+in_a_virtual_environment = pytest.mark.skipif(
+    sys.prefix == sys.base_prefix, reason="the tests are not running in a virtual environment"
+)
+
+
+def inside(folder_text, root):
+    root_text = os.path.normcase(os.path.realpath(root))
+    entry = os.path.normcase(os.path.realpath(folder_text))
+    return entry == root_text or entry.startswith(root_text + os.sep)
+
+
+@in_a_virtual_environment
+def test_a_run_does_not_inherit_the_virtual_environment_mathdoer_runs_in(run_python, monkeypatch):
+    """Regression: a launcher given as the interpreter, such as the Windows python3.exe alias,
+    ran mathdoer's own Python instead of the one it stands for because of VIRTUAL_ENV."""
+    scripts = Path(sys.prefix) / ("Scripts" if sys.platform == "win32" else "bin")
+    monkeypatch.setenv("VIRTUAL_ENV", sys.prefix)
+    monkeypatch.setenv("PATH", os.pathsep.join([str(scripts), os.environ.get("PATH", "")]))
+    result = run_python("import os\nprint(os.environ.get('VIRTUAL_ENV'))\nprint(os.environ['PATH'])")
+    assert result.outcome is RunOutcome.COMPLETED
+    virtual_environment, search_path = result.output_text.splitlines()
+    assert virtual_environment == "None"
+    assert [entry for entry in search_path.split(os.pathsep) if entry and inside(entry, sys.prefix)] == []
+
+
+def test_a_run_keeps_the_rest_of_the_environment(run_python, monkeypatch):
+    monkeypatch.setenv("MATHDOER_TEST_KEPT", "yes")
+    assert run_python("import os\nprint(os.environ['MATHDOER_TEST_KEPT'])").output_text == "yes\n"
+
+
+def test_a_bare_interpreter_name_is_not_looked_up_inside_mathdoers_own_virtual_environment(
+    run_python, make_fake_interpreter, tmp_path, monkeypatch
+):
+    inside_the_environment = make_fake_interpreter("mathdoer_test_python", tmp_path / "venv" / "Scripts")
+    elsewhere = make_fake_interpreter("mathdoer_test_python", tmp_path / "elsewhere")
+    monkeypatch.setattr("mathdoer.run_environment.own_virtual_environment", lambda: tmp_path / "venv")
+    monkeypatch.setenv("PATH", os.pathsep.join([str(inside_the_environment.parent), str(elsewhere.parent)]))
+    result = run_python("1", settings_text="interpreter = 'mathdoer_test_python'\n")
+    # The stand-ins are not real programs, so the run fails to start and names the one it chose.
+    assert str(elsewhere).lower() in result.error_text.lower()
+    assert str(inside_the_environment).lower() not in result.error_text.lower()
+
+
 # ------------------------------------------------- the worker and the app agree
 
 def test_the_worker_and_the_app_agree_on_the_protocol():

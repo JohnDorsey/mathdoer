@@ -1,5 +1,4 @@
 """Tests for reading the user's settings file and choosing the interpreter from it."""
-import sys
 import tomllib
 from pathlib import Path
 
@@ -15,21 +14,6 @@ SETTINGS_FILE_NAME = "settings_python.toml"
 @pytest.fixture
 def settings_path(tmp_path):
     return tmp_path / SETTINGS_FILE_NAME
-
-
-@pytest.fixture
-def make_fake_interpreter(tmp_path):
-    """A file that counts as an executable program, without being a real interpreter."""
-
-    def make(name="fake_interpreter", directory=None):
-        directory = Path(directory or tmp_path)
-        directory.mkdir(parents=True, exist_ok=True)
-        path = directory / (name + (".exe" if sys.platform == "win32" else ""))
-        path.write_text("", encoding="utf-8")
-        path.chmod(0o755)
-        return path
-
-    return make
 
 
 def resolve(settings_path):
@@ -77,6 +61,29 @@ def test_a_bare_name_is_looked_up_on_the_search_path(
     monkeypatch.setenv("PATH", str(interpreter.parent))
     settings_path.write_text("interpreter = 'mathdoer_test_python'\n", encoding="utf-8")
     assert Path(resolve(settings_path)).resolve() == interpreter.resolve()
+
+
+def test_a_given_search_path_replaces_the_one_of_the_environment(
+    settings_path, make_fake_interpreter, tmp_path, monkeypatch
+):
+    """The caller can look a name up on a different search path, for example one without
+    mathdoer's own virtual environment on it."""
+    wanted = make_fake_interpreter("mathdoer_test_python", tmp_path / "wanted")
+    unwanted = make_fake_interpreter("mathdoer_test_python", tmp_path / "unwanted")
+    monkeypatch.setenv("PATH", str(unwanted.parent))
+    settings_path.write_text("interpreter = 'mathdoer_test_python'\n", encoding="utf-8")
+    found = resolve_interpreter(settings_path, DEFAULT_INTERPRETER, search_path=str(wanted.parent))
+    assert Path(found).resolve() == wanted.resolve()
+
+
+def test_a_name_that_is_only_on_the_environment_search_path_is_not_found_on_a_given_one(
+    settings_path, make_fake_interpreter, tmp_path, monkeypatch
+):
+    only_in_environment = make_fake_interpreter("mathdoer_test_python", tmp_path / "environment")
+    monkeypatch.setenv("PATH", str(only_in_environment.parent))
+    settings_path.write_text("interpreter = 'mathdoer_test_python'\n", encoding="utf-8")
+    with pytest.raises(UserSettingsError, match="not found"):
+        resolve_interpreter(settings_path, DEFAULT_INTERPRETER, search_path=str(tmp_path / "empty"))
 
 
 def test_the_surrounding_spaces_of_the_text_do_not_matter(settings_path, make_fake_interpreter):

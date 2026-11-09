@@ -113,6 +113,21 @@ def make_python_run_settings(tmp_path):
 
 
 @pytest.fixture
+def make_fake_interpreter(tmp_path):
+    """A file that counts as an executable program, without being a real interpreter."""
+
+    def make(name="fake_interpreter", directory=None):
+        directory = Path(directory or tmp_path)
+        directory.mkdir(parents=True, exist_ok=True)
+        path = directory / (name + (".exe" if sys.platform == "win32" else ""))
+        path.write_text("", encoding="utf-8")
+        path.chmod(0o755)
+        return path
+
+    return make
+
+
+@pytest.fixture
 def make_wrapper_interpreter(tmp_path):
     """A program that runs the real Python with the variable MATHDOER_TEST_WRAPPER set to
     "yes", so a test can tell that a run used it. The fixture returns the program's path."""
