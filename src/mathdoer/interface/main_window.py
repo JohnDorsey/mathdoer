@@ -23,7 +23,7 @@ from mathdoer.output_text import normalize_output_text
 from mathdoer.progress import progress_text
 from mathdoer.registry import Registry, RegistryEntry, load_registry
 from mathdoer.running import OutputText, Run, RunFinished, RunOutcome, RunSettings
-from mathdoer.startup_files import create_startup_file_if_missing
+from mathdoer.user_files import create_file_if_missing
 
 WINDOW_TITLE = "mathdoer"
 INITIAL_WINDOW_SIZE = (900, 700)
@@ -91,7 +91,12 @@ class MainWindow(QMainWindow):
 
         self._active_box = ActiveBoxTracker((self.prompt_box, self.output_box))
         self._edit_menu = EditMenu(
-            self.menuBar(), self.prompt_box, self.output_box, self._active_box, self._edit_startup_file
+            self.menuBar(),
+            self.prompt_box,
+            self.output_box,
+            self._active_box,
+            self._edit_startup_file,
+            self._edit_settings,
         )
         add_registry_menus(
             self.menuBar(),
@@ -136,6 +141,10 @@ class MainWindow(QMainWindow):
         return self._run_settings.startup_path
 
     @property
+    def settings_path(self) -> Path:
+        return self._run_settings.settings_path
+
+    @property
     def find_bar(self) -> FindBar:
         return self.prompt_pane.find_bar
 
@@ -165,13 +174,21 @@ class MainWindow(QMainWindow):
         self.prompt_box.setFocus()
 
     def _edit_startup_file(self) -> None:
+        self._open_user_file(
+            "startup file", self._run_settings.language.default_startup_path, self._run_settings.startup_path
+        )
+
+    def _edit_settings(self) -> None:
+        self._open_user_file(
+            "settings file", self._run_settings.language.default_settings_path, self._run_settings.settings_path
+        )
+
+    def _open_user_file(self, description: str, default_path: Path, path: Path) -> None:
+        """Open the file in the text editor, first recreating it from the default if it is missing."""
         try:
-            path = create_startup_file_if_missing(
-                self._run_settings.language, self._run_settings.startup_path
-            )
-            self._open_in_text_editor(path)
+            self._open_in_text_editor(create_file_if_missing(default_path, path))
         except OSError as error:
-            self._show_status(f"[could not open the startup file: {error}]")
+            self._show_status(f"[could not open the {description}: {error}]")
 
     def _show_status(self, message: str) -> None:
         self.output_box.append_marker(message)

@@ -16,6 +16,7 @@ Reference install of PrecCalc64: `E:\data-game-win10pro2\lock\portable\preccalc6
 
 - Registry labels and names must be unambiguous and descriptive, even where PrecCalc64's are not. Registry values keep the greatest precision that is definitely correct and are never rounded to fit a number type (a future setting may give users full precision).
 - Files that could be duplicated or confused across languages carry the language name, for example `startup_python.py`.
+- User settings live in one TOML file per language (`settings_python.toml`), read before every run. A mistake in it is an error shown in the output box, never silently ignored (unknown settings are errors too).
 - Every run is a clean slate in a separate process. No persisted Python session between runs.
 - The first version has no file menu and does not persist the prompt text.
 - Dark theme with high contrast; text is never dim.

@@ -38,6 +38,18 @@ In the Constants and Units menus, a click inserts the name of the constant or un
 
 Before every prompt, mathdoer runs your startup file in the same namespace. On Windows it is `%APPDATA%\mathdoer\startup_python.py`; Edit > Edit startup file opens it in your editor for text files. It starts out with `from math import *` and code that defines every constant and unit from the registry, such as `SPEED_OF_LIGHT` and `INCH`. mathdoer never overwrites your changes.
 
+## Settings
+
+Edit > Edit settings opens the settings file, `%APPDATA%\mathdoer\settings_python.toml` on Windows, in your editor for text files, creating it first if it is missing. mathdoer reads it before every run, so a change takes effect on the next run. A mistake in it is reported in the output box and the prompt is not run.
+
+The one setting is `interpreter`, the Python that runs your prompts (3.11 or later). Without it prompts run on the Python that mathdoer itself runs on, which has no extra packages. Point it at a Python that has the packages you want:
+
+```toml
+interpreter = 'C:\Python311\python.exe'
+```
+
+Use single quotes around a Windows path so its backslashes are taken literally. Give the full path: a bare name such as `py` is looked up on the PATH that mathdoer was started with, and `uv run` puts the project's own environment first on that PATH.
+
 ## License
 
 Copyright (C) 2026 John Dorsey

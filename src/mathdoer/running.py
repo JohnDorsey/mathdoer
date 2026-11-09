@@ -28,6 +28,7 @@ from enum import Enum
 from pathlib import Path
 
 from mathdoer.languages import Language
+from mathdoer.user_settings import UserSettingsError, resolve_interpreter
 
 EXIT_CODE_COMPLETED = 0
 EXIT_CODE_PROMPT_ERROR = 1
@@ -81,15 +82,23 @@ class RunSettings:
     """Everything about a run except the prompt."""
 
     language: Language
-    interpreter_path: Path
+    # Runs use this interpreter unless the settings file names another.
+    default_interpreter_path: Path
+    settings_path: Path
     startup_path: Path
     registry_path: Path
     working_directory: Path
 
     def start(self, prompt_text: str) -> "Run":
+        """Read the settings file, then start a run. A problem in the settings file raises
+        nothing: the run has already ended, with the explanation as error text."""
+        try:
+            interpreter_path = resolve_interpreter(self.settings_path, self.default_interpreter_path)
+        except UserSettingsError as error:
+            return Run.failed_to_start(str(error))
         return Run(
             language=self.language,
-            interpreter_path=self.interpreter_path,
+            interpreter_path=interpreter_path,
             prompt_text=prompt_text,
             startup_path=self.startup_path,
             registry_path=self.registry_path,
@@ -110,12 +119,7 @@ class Run:
         registry_path: Path,
         working_directory: Path,
     ):
-        self._events: queue.Queue[RunEvent] = queue.Queue()
-        self._finished = threading.Event()
-        self._cancel_lock = threading.Lock()
-        self._cancelled = False
-        self._process = None
-
+        self._set_up_state()
         command = language.build_worker_command(Path(interpreter_path))
         environment = {**os.environ, REGISTRY_ENVIRONMENT_VARIABLE: str(registry_path)}
         try:
@@ -129,8 +133,7 @@ class Run:
                 **_platform_process_options(),
             )
         except OSError as error:
-            self._events.put(OutputText(f"Cannot start {interpreter_path}: {error}\n", is_error=True))
-            self._finish(RunOutcome.CRASHED, None)
+            self._fail_to_start(f"Cannot start {interpreter_path}: {error}")
             return
 
         request = json.dumps(
@@ -147,6 +150,14 @@ class Run:
         ]
         for thread in threads:
             thread.start()
+
+    @classmethod
+    def failed_to_start(cls, explanation: str) -> "Run":
+        """A run that has already ended because it could not be started."""
+        run = cls.__new__(cls)
+        run._set_up_state()
+        run._fail_to_start(explanation)
+        return run
 
     @property
     def is_finished(self) -> bool:
@@ -172,6 +183,17 @@ class Run:
                 return
             self._cancelled = True
         _kill_process_tree(self._process)
+
+    def _set_up_state(self) -> None:
+        self._events: queue.Queue[RunEvent] = queue.Queue()
+        self._finished = threading.Event()
+        self._cancel_lock = threading.Lock()
+        self._cancelled = False
+        self._process = None
+
+    def _fail_to_start(self, explanation: str) -> None:
+        self._events.put(OutputText(explanation + "\n", is_error=True))
+        self._finish(RunOutcome.CRASHED, None)
 
     def _finish(self, outcome: RunOutcome, exit_code: int | None) -> None:
         self._events.put(RunFinished(outcome, exit_code))

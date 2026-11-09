@@ -1,13 +1,15 @@
-"""Tests for locating and creating the user's startup files."""
+"""Tests for locating and creating the user's startup and settings files."""
 import sys
 from pathlib import Path
 
 import pytest
 
 from mathdoer.languages.python import PYTHON
-from mathdoer.startup_files import (
+from mathdoer.user_files import (
+    create_file_if_missing,
     create_startup_file_if_missing,
     ensure_startup_file,
+    settings_file_path,
     startup_file_path,
     user_configuration_directory,
 )
@@ -85,3 +87,30 @@ def test_ensure_keeps_an_empty_file_the_user_made_on_purpose(tmp_path):
     path.write_text("", encoding="utf-8")
     ensure_startup_file(PYTHON, tmp_path)
     assert path.read_text(encoding="utf-8") == ""
+
+
+def test_the_settings_file_path_is_the_language_settings_file_name_in_the_directory(tmp_path):
+    assert settings_file_path(PYTHON, tmp_path) == tmp_path / "settings_python.toml"
+
+
+def test_a_missing_file_is_created_with_its_parent_folders_from_the_given_default(tmp_path):
+    default = tmp_path / "default.toml"
+    default.write_text("# the default\n", encoding="utf-8")
+    path = tmp_path / "nested" / "settings.toml"
+    assert create_file_if_missing(default, path) == path
+    assert path.read_text(encoding="utf-8") == "# the default\n"
+
+
+def test_an_existing_file_is_never_overwritten_by_create_file_if_missing(tmp_path):
+    default = tmp_path / "default.toml"
+    default.write_text("# the default\n", encoding="utf-8")
+    path = tmp_path / "settings.toml"
+    path.write_text("# mine\n", encoding="utf-8")
+    create_file_if_missing(default, path)
+    assert path.read_text(encoding="utf-8") == "# mine\n"
+
+
+def test_the_default_settings_text_is_copied_exactly(tmp_path):
+    path = tmp_path / PYTHON.settings_file_name
+    create_file_if_missing(PYTHON.default_settings_path, path)
+    assert path.read_bytes() == PYTHON.default_settings_path.read_bytes()

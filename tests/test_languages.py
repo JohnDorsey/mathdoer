@@ -18,6 +18,7 @@ def make_language(**overrides):
         display_name="Example",
         file_extension=".ex",
         default_startup_path=Path("startup_example.ex"),
+        default_settings_path=Path("settings_example.toml"),
         build_worker_command=lambda interpreter_path: [str(interpreter_path), "worker"],
         format_name=lambda entry: entry.name.lower(),
         format_literal=lambda entry: entry.value_text,
@@ -52,6 +53,17 @@ def test_languages_that_share_an_extension_get_different_startup_file_names():
 def test_the_bundled_default_startup_file_follows_the_naming_convention():
     assert PYTHON.default_startup_path.is_file()
     assert PYTHON.default_startup_path.name == PYTHON.startup_file_name
+
+
+def test_the_settings_file_name_carries_the_language_name_and_is_toml():
+    assert PYTHON.settings_file_name == "settings_python.toml"
+    assert make_language().settings_file_name == "settings_example.toml"
+
+
+def test_languages_that_share_an_extension_still_get_different_settings_file_names():
+    first = make_language(identifier="first", file_extension=".py")
+    second = make_language(identifier="second", file_extension=".py")
+    assert first.settings_file_name != second.settings_file_name
 
 
 @pytest.mark.parametrize("identifier", ["", "Python", "py thon", "py-thon", "1python", "python!"])

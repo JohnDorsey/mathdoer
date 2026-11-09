@@ -33,6 +33,7 @@ class Language:
     display_name: str
     file_extension: str
     default_startup_path: Path
+    default_settings_path: Path
     # Given the path of the interpreter, returns the command that starts the worker.
     # The worker follows the protocol described in mathdoer.running.
     build_worker_command: Callable[[Path], list[str]]
@@ -58,3 +59,8 @@ class Language:
     def startup_file_name(self) -> str:
         """Carries the language name so startup files never collide, whatever their extension."""
         return f"startup_{self.identifier}{self.file_extension}"
+
+    @property
+    def settings_file_name(self) -> str:
+        """Settings are TOML whatever the language, so the language name keeps the files apart."""
+        return f"settings_{self.identifier}.toml"

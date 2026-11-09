@@ -1,4 +1,4 @@
-"""The Python language: its worker script and its default startup file."""
+"""The Python language: its worker script and its default startup and settings files."""
 from pathlib import Path
 
 from mathdoer.languages import EditingRules, Language
@@ -36,6 +36,7 @@ PYTHON = Language(
     display_name="Python",
     file_extension=".py",
     default_startup_path=LANGUAGE_FOLDER / "startup_python.py",
+    default_settings_path=LANGUAGE_FOLDER / "settings_python.toml",
     build_worker_command=build_worker_command,
     format_name=format_name,
     format_literal=format_literal,

@@ -184,6 +184,25 @@ def test_an_interpreter_that_cannot_start_is_explained_once(qtbot, make_window, 
     assert "[the worker stopped" not in text
 
 
+def test_a_problem_in_the_settings_file_is_explained_once_in_the_error_color(qtbot, make_window):
+    window = make_window(settings_text="interpreter = 'mathdoer_no_such_program'\n")
+    text = run_to_the_end(qtbot, window, "print('PROMPT-WAS-RUN')")
+    assert "mathdoer_no_such_program" in text
+    assert "settings_python.toml" in text
+    assert "PROMPT-WAS-RUN" not in text
+    assert "[the worker stopped" not in text
+    assert foreground_at(window.output_box, 0) == DARK_THEME.error_text
+    assert not window.is_running
+
+
+def test_fixing_the_settings_file_fixes_the_next_run_without_restarting(qtbot, make_window, make_wrapper_interpreter):
+    window = make_window(settings_text="interpreter = 'mathdoer_no_such_program'\n")
+    assert "not found" in run_to_the_end(qtbot, window, "print('fine')")
+    wrapper = make_wrapper_interpreter()
+    window.settings_path.write_text(f"interpreter = '{wrapper}'\n", encoding="utf-8")
+    assert run_to_the_end(qtbot, window, "import os\nprint(os.environ['MATHDOER_TEST_WRAPPER'])") == "yes\n"
+
+
 def test_carriage_returns_in_output_become_line_breaks(qtbot, window):
     assert run_to_the_end(qtbot, window, r"print('a\r\nb\rc')") == "a\nb\nc\n"
 

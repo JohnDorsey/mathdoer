@@ -56,7 +56,8 @@ def test_run_settings_start_a_run_with_their_values(tmp_path):
     startup_path.write_text("MARKER = 41", encoding="utf-8")
     settings = RunSettings(
         language=PYTHON,
-        interpreter_path=Path(sys.executable),
+        default_interpreter_path=Path(sys.executable),
+        settings_path=tmp_path / PYTHON.settings_file_name,
         startup_path=startup_path,
         registry_path=shipped_registry_path(),
         working_directory=tmp_path,
@@ -68,6 +69,54 @@ def test_run_settings_start_a_run_with_their_values(tmp_path):
     assert all(not event.is_error for event in output_events)
     assert "".join(event.text for event in output_events) == "42\n"
     assert events[-1] == RunFinished(RunOutcome.COMPLETED, EXIT_CODE_COMPLETED)
+
+
+# --------------------------------------------- the interpreter from the settings file
+
+WRAPPER_CHECK = "import os\nprint(os.environ.get('MATHDOER_TEST_WRAPPER'))"
+
+
+def test_without_a_setting_a_run_uses_the_default_interpreter(run_python, make_wrapper_interpreter):
+    make_wrapper_interpreter()  # exists, but no setting names it
+    assert run_python(WRAPPER_CHECK, settings_text="").output_text == "None\n"
+
+
+def test_a_run_uses_the_interpreter_named_in_the_settings_file(run_python, make_wrapper_interpreter):
+    wrapper = make_wrapper_interpreter()
+    result = run_python(WRAPPER_CHECK, settings_text=f"interpreter = '{wrapper}'\n")
+    assert result.outcome is RunOutcome.COMPLETED
+    assert result.output_text == "yes\n"
+
+
+def test_a_problem_in_the_settings_file_stops_the_run_before_it_starts(run_python, tmp_path):
+    result = run_python("print('PROMPT-WAS-RUN')", settings_text="interpreter = 'mathdoer_no_such_program'\n")
+    assert result.outcome is RunOutcome.CRASHED
+    assert result.exit_code is None
+    assert result.output_text == ""
+    assert "PROMPT-WAS-RUN" not in result.combined_text
+    assert "mathdoer_no_such_program" in result.error_text
+    assert str(tmp_path / "settings_python.toml") in result.error_text
+    assert result.error_text.endswith("\n")
+
+
+def test_the_settings_file_is_read_again_at_the_start_of_every_run(
+    make_python_run_settings, make_wrapper_interpreter
+):
+    wrapper = make_wrapper_interpreter()
+    settings = make_python_run_settings(settings_text="interpreter = 'mathdoer_no_such_program'\n")
+    broken = settings.start(WRAPPER_CHECK)
+    assert broken.wait(30)
+    assert [event.outcome for event in broken.poll() if isinstance(event, RunFinished)] == [RunOutcome.CRASHED]
+
+    settings.settings_path.write_text(f"interpreter = '{wrapper}'\n", encoding="utf-8")
+    fixed = settings.start(WRAPPER_CHECK)
+    assert fixed.wait(30)
+    assert "".join(event.text for event in fixed.poll() if isinstance(event, OutputText)) == "yes\n"
+
+    settings.settings_path.unlink()
+    default = settings.start(WRAPPER_CHECK)
+    assert default.wait(30)
+    assert "".join(event.text for event in default.poll() if isinstance(event, OutputText)) == "None\n"
 
 
 # ------------------------------------------------- the worker and the app agree

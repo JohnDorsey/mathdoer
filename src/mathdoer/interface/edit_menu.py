@@ -18,6 +18,7 @@ class EditMenu:
         output_box: QPlainTextEdit,
         tracker: ActiveBoxTracker,
         edit_startup_file: Callable[[], None],
+        edit_settings: Callable[[], None],
     ):
         self._prompt_box = prompt_box
         self._output_box = output_box
@@ -35,6 +36,7 @@ class EditMenu:
         self._copy_output = self._add("Copy output", None, self._copy_the_output)
         self.menu.addSeparator()
         self._add("Edit startup file", None, edit_startup_file)
+        self._add("Edit settings", None, edit_settings)
         self.menu.aboutToShow.connect(self._update_enabled_states)
 
     def _add(self, text: str, shortcut_hint: str | None, handler: Callable[[], None]) -> QAction:

@@ -1,4 +1,4 @@
-"""Where the user's startup files live, and creating them from the bundled defaults."""
+"""Where the user's startup and settings files live, and creating them from the bundled defaults."""
 import os
 import shutil
 import sys
@@ -25,14 +25,22 @@ def startup_file_path(language: Language, directory: Path) -> Path:
     return Path(directory) / language.startup_file_name
 
 
-def create_startup_file_if_missing(language: Language, path: Path) -> Path:
-    """Create the startup file at the path from the bundled default if it does not exist;
+def settings_file_path(language: Language, directory: Path) -> Path:
+    return Path(directory) / language.settings_file_name
+
+
+def create_file_if_missing(default_path: Path, path: Path) -> Path:
+    """Create the file at the path as a copy of the bundled default if it does not exist;
     never overwrite."""
     path = Path(path)
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(language.default_startup_path, path)
+        shutil.copyfile(default_path, path)
     return path
+
+
+def create_startup_file_if_missing(language: Language, path: Path) -> Path:
+    return create_file_if_missing(language.default_startup_path, path)
 
 
 def ensure_startup_file(language: Language, directory: Path) -> Path:

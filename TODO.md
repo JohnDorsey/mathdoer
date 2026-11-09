@@ -48,6 +48,11 @@ First version.
 - [x] GPL-3.0-or-later license
 - [ ] Windows first, Python 3.11 or later
 
+Interpreter setting.
+
+- [x] Settings file per language (`settings_python.toml`, TOML, created from a bundled default by Edit > Edit settings, read before every run); unknown settings and bad values are errors that are explained in the output box
+  - [x] `interpreter`: the program that runs the prompt, as a full path or a name on the PATH
+
 ## Unscheduled
 
 - [ ] Setting to control numeric behavior (plain Python numbers today; for example `Decimal` or `Fraction` literals, or higher precision)
@@ -59,11 +64,10 @@ First version.
 - [ ] Auto-indent after an opening bracket (today only a colon adds a level)
 - [ ] Make Enter quicker on very large prompts (it lexes every earlier line; 45 ms at 4,300 lines)
 - [ ] Languages other than Python (the interface always stays Python)
-- [ ] Setting for a configurable interpreter that runs the prompt
 - [ ] Reset the startup file to the bundled default
 - [ ] Accept Notepad++ theme files; bundle Notepad++ themes (check the license of each theme first)
 - [ ] `input()` opens a popup window with a text field (the worker protocol already has a closed standard input to extend)
-- [ ] Package as an EXE (the interpreter that runs the prompt must be bundled or configured)
+- [ ] Package as an EXE (the interpreter that runs the prompt can now be configured; decide whether to bundle one as well)
 - [ ] Third box above the prompt box for definitions that persist between runs
 - [ ] File menu and persistence of the prompt text
 - [ ] History (not decided; leaning towards no persisted Python session between runs)

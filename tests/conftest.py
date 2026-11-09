@@ -87,17 +87,45 @@ def make_python_run_settings(tmp_path):
     """Settings for Python runs in a temporary folder, with a startup file of the given text
     (None leaves the startup file missing)."""
 
-    def make(startup_text="", working_directory=None, interpreter_path=None, registry_path=None):
+    def make(
+        startup_text="",
+        working_directory=None,
+        interpreter_path=None,
+        registry_path=None,
+        settings_text=None,
+    ):
         startup_path = tmp_path / PYTHON.startup_file_name
         if startup_text is not None:
             startup_path.write_text(startup_text, encoding="utf-8")
+        settings_path = tmp_path / PYTHON.settings_file_name
+        if settings_text is not None:
+            settings_path.write_text(settings_text, encoding="utf-8")
         return RunSettings(
             language=PYTHON,
-            interpreter_path=interpreter_path or Path(sys.executable),
+            default_interpreter_path=interpreter_path or Path(sys.executable),
+            settings_path=settings_path,
             startup_path=startup_path,
             registry_path=registry_path or shipped_registry_path(),
             working_directory=working_directory or tmp_path,
         )
+
+    return make
+
+
+@pytest.fixture
+def make_wrapper_interpreter(tmp_path):
+    """A program that runs the real Python with the variable MATHDOER_TEST_WRAPPER set to
+    "yes", so a test can tell that a run used it. The fixture returns the program's path."""
+
+    def make(name="wrapper_interpreter"):
+        if sys.platform == "win32":
+            path = tmp_path / f"{name}.cmd"
+            path.write_text(f'@set MATHDOER_TEST_WRAPPER=yes\r\n@"{sys.executable}" %*\r\n', encoding="ascii")
+        else:
+            path = tmp_path / name
+            path.write_text(f'#!/bin/sh\nMATHDOER_TEST_WRAPPER=yes exec "{sys.executable}" "$@"\n')
+            path.chmod(0o755)
+        return path
 
     return make
 
@@ -123,14 +151,14 @@ def fake_clock():
 @pytest.fixture
 def make_window(qtbot, make_python_run_settings, fake_clock):
     """Show a main window, ready for key presses. Options for the run settings
-    (working_directory, interpreter_path, registry_path) and the startup file text are
-    passed to make_python_run_settings; the rest go to MainWindow."""
+    (working_directory, interpreter_path, registry_path, settings_text) and the startup file
+    text are passed to make_python_run_settings; the rest go to MainWindow."""
     from mathdoer.interface.main_window import MainWindow
 
     def make(startup_text="", **options):
         settings_options = {
             name: options.pop(name)
-            for name in ("working_directory", "interpreter_path", "registry_path")
+            for name in ("working_directory", "interpreter_path", "registry_path", "settings_text")
             if name in options
         }
         settings = make_python_run_settings(startup_text=startup_text, **settings_options)
