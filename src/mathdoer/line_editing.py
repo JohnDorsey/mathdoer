@@ -45,13 +45,33 @@ def home_column(line: str, column: int) -> int:
     return first_character if column != first_character else 0
 
 
-def indent(lines: Sequence[str], anchor: Position, cursor: Position, rules: EditingRules) -> TextEdit | None:
+def tab_insertion(line: str, column: int, rules: EditingRules, *, use_tab_character: bool = False) -> str:
+    """What Tab inserts at the column of the line: spaces up to the next tab stop, or a tab
+    character if asked to. A line already indented with the other kind of whitespace keeps to
+    its own, as Python rejects a line that mixes the two."""
+    whitespace = leading_whitespace(line)
+    inside_indentation = column <= len(whitespace)
+    if inside_indentation and "\t" in whitespace:
+        return "\t"
+    if use_tab_character and not (inside_indentation and whitespace):
+        return "\t"
+    return " " * (rules.indent_width - _display_width(line[:column], rules.indent_width) % rules.indent_width)
+
+
+def indent(
+    lines: Sequence[str],
+    anchor: Position,
+    cursor: Position,
+    rules: EditingRules,
+    *,
+    use_tab_character: bool = False,
+) -> TextEdit | None:
     """Tab. Over several lines it indents each of them; otherwise it replaces the selection,
-    if any, with spaces up to the next tab stop."""
+    if any, with spaces up to the next tab stop (or a tab character, if asked to)."""
     start, end = sorted((anchor, cursor))
     if start.line == end.line:
         line = lines[start.line]
-        insertion = _tab_insertion(line, start.column, rules.indent_width)
+        insertion = tab_insertion(line, start.column, rules, use_tab_character=use_tab_character)
         position = Position(start.line, start.column + len(insertion))
         new_line = line[: start.column] + insertion + line[end.column:]
         return TextEdit(start.line, start.line, (new_line,), position, position)
@@ -61,7 +81,7 @@ def indent(lines: Sequence[str], anchor: Position, cursor: Position, rules: Edit
     new_lines = []
     for index in range(first, last + 1):
         line = lines[index]
-        prefix = _indentation_to_add(line, rules.indent_width) if line else ""
+        prefix = _indentation_to_add(line, rules.indent_width, use_tab_character) if line else ""
         added.append(len(prefix))
         new_lines.append(prefix + line)
     if not any(added):
@@ -92,10 +112,18 @@ def dedent(lines: Sequence[str], anchor: Position, cursor: Position, rules: Edit
 
 
 def insert_newline(
-    lines: Sequence[str], anchor: Position, cursor: Position, rules: EditingRules
+    lines: Sequence[str],
+    anchor: Position,
+    cursor: Position,
+    rules: EditingRules,
+    *,
+    indent_after_block_opening: bool = True,
+    use_tab_character: bool = False,
 ) -> TextEdit:
     """Enter. Replaces the selection with a line break; the new line keeps the indentation of
-    the line it came from, plus one level if the code before the caret opens a block."""
+    the line it came from, plus one level if the code before the caret opens a block (and
+    block openings are to add a level). The level is a tab character, if asked to, on a line
+    that has no indentation yet."""
     start, end = sorted((anchor, cursor))
     line = lines[start.line]
     whitespace = leading_whitespace(line)
@@ -108,8 +136,8 @@ def insert_newline(
         new_tail, caret_column = tail, 0
     else:
         indentation = whitespace
-        if rules.opens_indented_block(lines, start.line, start.column):
-            indentation += _indent_unit(whitespace, rules.indent_width)
+        if indent_after_block_opening and rules.opens_indented_block(lines, start.line, start.column):
+            indentation += _indent_unit(whitespace, rules.indent_width, use_tab_character)
         new_tail, caret_column = indentation + tail.lstrip(WHITESPACE), len(indentation)
 
     position = Position(start.line + 1, caret_column)
@@ -212,22 +240,20 @@ def _display_width(text: str, width: int) -> int:
     return column
 
 
-def _indent_unit(whitespace: str, width: int) -> str:
-    """One level of indentation, in the style of the whitespace it follows: a line indented
-    with tabs gets a tab, any other line gets spaces, as Python rejects mixing the two."""
-    return "\t" if "\t" in whitespace else " " * width
+def _indents_with_tab(whitespace: str, use_tab_character: bool) -> bool:
+    """A line indented with tabs gets a tab. A line indented with spaces gets spaces, as Python
+    rejects mixing the two. A line with no indentation gets what the caller asked for."""
+    return "\t" in whitespace or (use_tab_character and not whitespace)
 
 
-def _tab_insertion(line: str, column: int, width: int) -> str:
+def _indent_unit(whitespace: str, width: int, use_tab_character: bool) -> str:
+    """One level of indentation, in the style of the whitespace it follows."""
+    return "\t" if _indents_with_tab(whitespace, use_tab_character) else " " * width
+
+
+def _indentation_to_add(line: str, width: int, use_tab_character: bool) -> str:
     whitespace = leading_whitespace(line)
-    if column <= len(whitespace) and "\t" in whitespace:
-        return "\t"
-    return " " * (width - _display_width(line[:column], width) % width)
-
-
-def _indentation_to_add(line: str, width: int) -> str:
-    whitespace = leading_whitespace(line)
-    if "\t" in whitespace:
+    if _indents_with_tab(whitespace, use_tab_character):
         return "\t"
     return " " * (width - len(whitespace) % width)
 

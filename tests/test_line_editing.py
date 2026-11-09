@@ -14,6 +14,7 @@ from mathdoer.line_editing import (
     indent,
     insert_newline,
     move_lines,
+    tab_insertion,
     toggle_comment,
 )
 
@@ -653,3 +654,127 @@ def test_every_edit_replaces_at_least_one_line_and_stays_inside_the_document():
             for position in (edit.anchor, edit.cursor):
                 assert 0 <= position.line < len(new_lines)
                 assert 0 <= position.column <= len(new_lines[position.line])
+
+
+# ------------------------------------------------- the options: tab characters, no block opening
+
+def raises_if_asked(lines, line, column):
+    raise AssertionError("the block opening was asked about")
+
+
+def test_tab_inserts_a_tab_character_when_asked_to():
+    assert result(["x"], indent(["x"], P(0, 0), P(0, 0), RULES, use_tab_character=True)) == (["	x"], P(0, 1), P(0, 1))
+    assert result([""], indent([""], P(0, 0), P(0, 0), RULES, use_tab_character=True)) == (["	"], P(0, 1), P(0, 1))
+
+
+def test_tab_inserts_a_tab_character_in_the_middle_of_text_when_asked_to():
+    edit = indent(["abcd"], P(0, 1), P(0, 1), RULES, use_tab_character=True)
+    assert result(["abcd"], edit) == (["a	bcd"], P(0, 2), P(0, 2))
+
+
+def test_tab_over_a_selection_inside_one_line_replaces_it_with_a_tab_character_when_asked_to():
+    edit = indent(["hello"], P(0, 1), P(0, 4), RULES, use_tab_character=True)
+    assert result(["hello"], edit) == (["h	o"], P(0, 2), P(0, 2))
+
+
+def test_tab_inside_the_spaces_of_a_line_indented_with_spaces_still_inserts_spaces():
+    """Python rejects a line that mixes the two, so the line's own style wins."""
+    assert result(["  x"], indent(["  x"], P(0, 1), P(0, 1), RULES, use_tab_character=True)) == (
+        ["     x"],
+        P(0, 4),
+        P(0, 4),
+    )
+    assert result(["    x"], indent(["    x"], P(0, 0), P(0, 0), RULES, use_tab_character=True)) == (
+        ["        x"],
+        P(0, 4),
+        P(0, 4),
+    )
+
+
+def test_tab_after_the_text_of_a_line_indented_with_spaces_inserts_a_tab_character_when_asked_to():
+    edit = indent(["    x"], P(0, 5), P(0, 5), RULES, use_tab_character=True)
+    assert result(["    x"], edit) == (["    x	"], P(0, 6), P(0, 6))
+
+
+def test_tab_over_several_lines_gives_each_line_the_style_of_its_own_indentation():
+    lines = ["a", "  b", "	c", ""]
+    edit = indent(lines, P(0, 0), P(3, 0), RULES, use_tab_character=True)
+    assert (edit.first_line, edit.last_line) == (0, 2)
+    assert result(lines, edit)[0] == ["	a", "    b", "		c", ""]
+
+
+def test_the_default_for_tab_characters_is_off():
+    lines = ["a", "  b", "	c"]
+    assert indent(lines, P(0, 0), P(2, 1), RULES) == indent(lines, P(0, 0), P(2, 1), RULES, use_tab_character=False)
+
+
+def test_tab_insertion_is_what_a_single_line_indent_inserts():
+    """The text box inserts this itself when Tab is not to indent every selected line, so it must
+    never differ from what the indent command would have inserted."""
+    generator = random.Random(33)
+    for _ in range(300):
+        line = "".join(generator.choice(" 	ab") for _ in range(generator.randint(0, 10)))
+        column = generator.randint(0, len(line))
+        for use_tab_character in (False, True):
+            inserted = tab_insertion(line, column, RULES, use_tab_character=use_tab_character)
+            edit = indent([line], P(0, column), P(0, column), RULES, use_tab_character=use_tab_character)
+            assert edit.replacement == (line[:column] + inserted + line[column:],), (line, column)
+
+
+def test_enter_after_a_colon_adds_a_tab_character_to_an_unindented_line_when_asked_to():
+    edit = insert_newline(["if x:"], P(0, 5), P(0, 5), RULES, use_tab_character=True)
+    assert result(["if x:"], edit) == (["if x:", "	"], P(1, 1), P(1, 1))
+
+
+def test_enter_after_a_colon_adds_spaces_to_a_line_indented_with_spaces_even_when_asked_for_tabs():
+    edit = insert_newline(["  if x:"], P(0, 7), P(0, 7), RULES, use_tab_character=True)
+    assert result(["  if x:"], edit) == (["  if x:", "      "], P(1, 6), P(1, 6))
+
+
+def test_enter_after_a_colon_in_a_tab_indented_line_adds_a_tab_whatever_is_asked():
+    for use_tab_character in (False, True):
+        edit = insert_newline(["	if x:"], P(0, 6), P(0, 6), RULES, use_tab_character=use_tab_character)
+        assert result(["	if x:"], edit) == (["	if x:", "		"], P(1, 2), P(1, 2))
+
+
+def test_enter_after_a_colon_adds_no_level_when_block_openings_are_off():
+    edit = insert_newline(["  if x:"], P(0, 7), P(0, 7), RULES, indent_after_block_opening=False)
+    assert result(["  if x:"], edit) == (["  if x:", "  "], P(1, 2), P(1, 2))
+
+
+def test_enter_does_not_ask_whether_a_block_opens_when_block_openings_are_off():
+    no_asking = EditingRules("#", raises_if_asked, (("(", ")"),), 4)
+    edit = insert_newline(["    x"], P(0, 5), P(0, 5), no_asking, indent_after_block_opening=False)
+    assert result(["    x"], edit) == (["    x", "    "], P(1, 4), P(1, 4))
+
+
+def test_the_default_for_block_openings_is_on():
+    lines = ["if x:"]
+    assert insert_newline(lines, P(0, 5), P(0, 5), RULES) == insert_newline(
+        lines, P(0, 5), P(0, 5), RULES, indent_after_block_opening=True
+    )
+    assert result(lines, insert_newline(lines, P(0, 5), P(0, 5), RULES))[0] == ["if x:", "    "]
+
+
+def test_the_options_keep_every_edit_inside_the_document():
+    generator = random.Random(15)
+    for _ in range(300):
+        lines = random_document(generator)
+        anchor, cursor = random_selection(generator, lines)
+        for use_tab_character in (False, True):
+            for indent_after_block_opening in (False, True):
+                for edit in (
+                    indent(lines, anchor, cursor, RULES, use_tab_character=use_tab_character),
+                    insert_newline(
+                        lines, anchor, cursor, RULES,
+                        indent_after_block_opening=indent_after_block_opening,
+                        use_tab_character=use_tab_character,
+                    ),
+                ):
+                    if edit is None:
+                        continue
+                    assert 0 <= edit.first_line <= edit.last_line < len(lines)
+                    new_lines = apply(lines, edit)
+                    for position in (edit.anchor, edit.cursor):
+                        assert 0 <= position.line < len(new_lines)
+                        assert 0 <= position.column <= len(new_lines[position.line])
