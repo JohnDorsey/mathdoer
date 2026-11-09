@@ -6,6 +6,7 @@ import pytest
 
 from mathdoer.languages.python import PYTHON
 from mathdoer.startup_files import (
+    create_startup_file_if_missing,
     ensure_startup_file,
     startup_file_path,
     user_configuration_directory,
@@ -64,6 +65,19 @@ def test_ensure_never_overwrites_the_users_edits(tmp_path):
     path.write_text("MY_OWN = 1\n", encoding="utf-8")
     assert ensure_startup_file(PYTHON, tmp_path) == path
     assert path.read_text(encoding="utf-8") == "MY_OWN = 1\n"
+
+
+def test_a_missing_startup_file_is_recreated_from_the_default_at_its_own_path(tmp_path):
+    path = tmp_path / "nested" / "my_startup.py"
+    assert create_startup_file_if_missing(PYTHON, path) == path
+    assert path.read_text(encoding="utf-8") == PYTHON.default_startup_path.read_text(encoding="utf-8")
+
+
+def test_an_existing_startup_file_is_left_alone_by_create_if_missing(tmp_path):
+    path = tmp_path / "my_startup.py"
+    path.write_text("MINE = 1\n", encoding="utf-8")
+    create_startup_file_if_missing(PYTHON, path)
+    assert path.read_text(encoding="utf-8") == "MINE = 1\n"
 
 
 def test_ensure_keeps_an_empty_file_the_user_made_on_purpose(tmp_path):

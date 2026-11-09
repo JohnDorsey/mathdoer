@@ -14,40 +14,55 @@ class OutputBuffer:
         self.clear()
 
     def clear(self) -> None:
-        self._chunks = deque()
+        self._chunks = deque()  # of (text, is_error)
         self._character_count = 0
         self.discarded_character_count = 0
 
-    def append(self, text: str) -> None:
+    def append(self, text: str, is_error: bool = False) -> str:
+        """Add text. Returns the text this discarded from the beginning, or an empty string."""
         if not text:
-            return
-        if len(text) >= self.maximum_character_count:
-            self.discarded_character_count += (
-                self._character_count + len(text) - self.maximum_character_count
-            )
-            self._chunks = deque([text[-self.maximum_character_count:]])
-            self._character_count = self.maximum_character_count
-            return
-        self._chunks.append(text)
+            return ""
+        cap = self.maximum_character_count
+        if len(text) >= cap:
+            discarded = self.text + text[: len(text) - cap]
+            self.discarded_character_count += len(discarded)
+            self._chunks = deque([(text[len(text) - cap:], is_error)])
+            self._character_count = cap
+            return discarded
+        self._chunks.append((text, is_error))
         self._character_count += len(text)
-        self._discard_oldest(self._character_count - self.maximum_character_count)
+        return self._discard_oldest(self._character_count - cap)
 
-    def _discard_oldest(self, count: int) -> None:
+    def _discard_oldest(self, count: int) -> str:
+        discarded_pieces = []
         while count > 0:
-            oldest = self._chunks[0]
-            if len(oldest) <= count:
+            oldest_text, is_error = self._chunks[0]
+            if len(oldest_text) <= count:
                 self._chunks.popleft()
-                dropped = len(oldest)
+                piece = oldest_text
             else:
-                self._chunks[0] = oldest[count:]
-                dropped = count
-            count -= dropped
-            self._character_count -= dropped
-            self.discarded_character_count += dropped
+                piece = oldest_text[:count]
+                self._chunks[0] = (oldest_text[count:], is_error)
+            discarded_pieces.append(piece)
+            count -= len(piece)
+            self._character_count -= len(piece)
+            self.discarded_character_count += len(piece)
+        return "".join(discarded_pieces)
 
     @property
     def text(self) -> str:
-        return "".join(self._chunks)
+        return "".join(text for text, _ in self._chunks)
+
+    @property
+    def segments(self) -> tuple[tuple[str, bool], ...]:
+        """The text as (text, is_error) runs, neighbours of the same kind merged."""
+        runs: list[list] = []
+        for text, is_error in self._chunks:
+            if runs and runs[-1][1] == is_error:
+                runs[-1][0] += text
+            else:
+                runs.append([text, is_error])
+        return tuple((text, is_error) for text, is_error in runs)
 
     @property
     def truncated(self) -> bool:

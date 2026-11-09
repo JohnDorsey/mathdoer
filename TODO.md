@@ -11,24 +11,24 @@ First version.
   - [x] Output streams live; cancelling stops the run and everything it started
   - [x] Output buffer with a size cap: when it overflows the oldest text is discarded
   - [x] `input()` fails with a clear message
-- [ ] Interface for running
-  - [ ] Ctrl+Enter runs; Shift+Esc cancels a running prompt and marks the output as cancelled
-  - [ ] The output box shows a truncation notice when the output buffer has discarded text
-  - [ ] A spinner (`/ - \ |`) is shown in the output while running; after 5 seconds without a result it is followed by a counter of elapsed time: `00:05`, then `hh:mm:ss` from one hour, then `d:hh:mm:ss` from one day
-  - [ ] Output is cleared when a new run starts; error text is shown in red
+- [x] Interface for running
+  - [x] Ctrl+Enter runs; Shift+Esc cancels a running prompt and marks the output as cancelled
+  - [x] The output box shows a truncation notice when the output buffer has discarded text
+  - [x] A spinner (`/ - \ |`) is shown in the output while running; after 5 seconds without a result it is followed by a counter of elapsed time: `00:05`, then `hh:mm:ss` from one hour, then `d:hh:mm:ss` from one day
+  - [x] Output is cleared when a new run starts; error text is shown in red
 - [ ] Keep internals and names language-neutral (ongoing): everything specific to Python (startup file, literals, comment syntax, running the code) lives in a Python language module, so other languages can be added later; the interface stays Python
 - [x] Startup file (Python's), created for the user from a bundled default
   - [x] `from math import *`, then `from builtins import pow` with a note explaining why (`math.pow` would otherwise turn `pow(2, 100)` into a float)
   - [x] Code that reads the registry and defines every constant and unit as a SCREAMING_SNAKE_CASE variable
-  - [ ] Edit > Edit startup file opens it in the system's editor for `.txt` files
+  - [x] Edit > Edit startup file opens it in the system's editor for `.txt` files (recreated from the default if missing)
 - [x] Registry of constants and units (TOML, language-neutral), the single source for the menus and the startup file
   - [x] Same items as preccalc; labels clarified where preccalc's are ambiguous; CODATA 2022 and exact definitions; names that carry their definition when the plain word is ambiguous
   - [x] Greatest correct precision: exact values as exact decimals or ratios; irrational values to 100 significant digits
-- [ ] Menus: Edit, Constants, Units
-  - [ ] Constants and Units: click inserts the name; Shift+click inserts the literal value (Alt+click was tried: Windows closes the menu when Alt is pressed)
-  - [ ] Edit: Undo, Redo, Cut, Copy, Paste, Select all, Copy output, Edit startup file
-- [ ] Prompt box (top, editable) and output box (bottom, read-only but selectable and copyable) with a draggable splitter; resizable window
-- [ ] Dark, high-contrast theme
+- [x] Menus: Edit, Constants, Units
+  - [x] Constants and Units: click inserts the name; Shift+click inserts the literal value (Alt+click was tried: Windows closes the menu when Alt is pressed)
+  - [x] Edit: Undo, Redo, Cut, Copy, Paste, Select all, Copy output, Edit startup file
+- [x] Prompt box (top, editable) and output box (bottom, read-only but selectable and copyable) with a draggable splitter; resizable window
+- [ ] Dark, high-contrast theme (first palette built for the boxes and the splitter and awaiting approval; syntax colors come with the editor)
 - [ ] Prompt box editing behaviors
   - [ ] Indentation guides
   - [ ] Tab inserts spaces; Shift+Tab dedents; Tab and Shift+Tab work on a selection
@@ -54,6 +54,7 @@ First version.
   - [ ] With full precision on, constants and units use their full registry precision
   - [ ] Evaluate the irrational registry entries (Stefan-Boltzmann constant, parsec) from their formulas at any requested precision; the stored 100 digits are a floor, not the limit
   - [ ] Decide what Shift+click inserts for very long values (the two irrational entries have 100 digits)
+- [ ] Make the separators between menu groups easier to see in the dark theme (they are almost invisible; Fusion draws them faintly)
 - [ ] Languages other than Python (the interface always stays Python)
 - [ ] Setting for a configurable interpreter that runs the prompt
 - [ ] Reset the startup file to the bundled default

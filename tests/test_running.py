@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 from mathdoer.languages.python import PYTHON
-from mathdoer.registry import load_registry
+from mathdoer.registry import load_registry, shipped_registry_path
 from mathdoer.running import (
     EXIT_CODE_COMPLETED,
     EXIT_CODE_PROMPT_ERROR,
@@ -23,7 +23,10 @@ from mathdoer.running import (
     MESSAGE_TEXT_KEY,
     REQUEST_PROMPT_TEXT_KEY,
     REQUEST_STARTUP_PATH_KEY,
+    OutputText,
+    RunFinished,
     RunOutcome,
+    RunSettings,
 )
 
 windows_only = pytest.mark.skipif(sys.platform != "win32", reason="uses Windows process tools")
@@ -46,6 +49,25 @@ def terminate_if_running(process_identifier):
         os.kill(process_identifier, signal.SIGTERM)
     except OSError:
         pass
+
+
+def test_run_settings_start_a_run_with_their_values(tmp_path):
+    startup_path = tmp_path / PYTHON.startup_file_name
+    startup_path.write_text("MARKER = 41", encoding="utf-8")
+    settings = RunSettings(
+        language=PYTHON,
+        interpreter_path=Path(sys.executable),
+        startup_path=startup_path,
+        registry_path=shipped_registry_path(),
+        working_directory=tmp_path,
+    )
+    run = settings.start("MARKER + 1")
+    assert run.wait(30)
+    events = run.poll()
+    output_events = [event for event in events if isinstance(event, OutputText)]
+    assert all(not event.is_error for event in output_events)
+    assert "".join(event.text for event in output_events) == "42\n"
+    assert events[-1] == RunFinished(RunOutcome.COMPLETED, EXIT_CODE_COMPLETED)
 
 
 # ------------------------------------------------- the worker and the app agree
@@ -477,17 +499,15 @@ def test_the_default_startup_defines_math_and_the_registry_names(
     assert run_with_default_startup(expression).output_text == expected_output
 
 
-def expected_registry_value(entry):
-    return int(entry.value_text) if entry.value_text.isdigit() else float(entry.value)
-
-
-def test_every_registry_name_gets_its_value_from_the_default_startup(run_with_default_startup):
+def test_every_registry_name_gets_its_value_from_the_default_startup(
+    run_with_default_startup, startup_value_of
+):
     entries = load_registry().entries()
     names = [entry.name for entry in entries]
     result = run_with_default_startup(
         f"for registry_name in {names!r}:\n    print(registry_name, repr(globals()[registry_name]))"
     )
-    expected = "".join(f"{entry.name} {expected_registry_value(entry)!r}\n" for entry in entries)
+    expected = "".join(f"{entry.name} {startup_value_of(entry)!r}\n" for entry in entries)
     assert result.output_text == expected
 
 

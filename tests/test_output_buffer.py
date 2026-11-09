@@ -75,6 +75,71 @@ def test_the_cap_must_be_positive(cap):
         OutputBuffer(maximum_character_count=cap)
 
 
+def test_append_returns_the_text_it_discarded():
+    buffer = OutputBuffer(maximum_character_count=5)
+    assert buffer.append("abc") == ""
+    assert buffer.append("defg") == "ab"
+    assert buffer.text == "cdefg"
+    assert buffer.append("0123456789") == "cdefg" + "01234"
+    assert buffer.text == "56789"
+
+
+def test_a_new_buffer_has_no_segments():
+    assert OutputBuffer().segments == ()
+
+
+def test_segments_remember_which_text_was_an_error_and_merge_neighbours_of_the_same_kind():
+    buffer = OutputBuffer(maximum_character_count=10)
+    buffer.append("ab")
+    buffer.append("cd")
+    buffer.append("EF", is_error=True)
+    buffer.append("gh")
+    assert buffer.segments == (("abcd", False), ("EF", True), ("gh", False))
+    assert buffer.text == "abcdEFgh"
+
+
+def test_overflow_cuts_segments_from_the_front():
+    buffer = OutputBuffer(maximum_character_count=5)
+    buffer.append("abc")
+    buffer.append("DE", is_error=True)
+    buffer.append("fg")
+    assert buffer.segments == (("c", False), ("DE", True), ("fg", False))
+
+
+def test_an_oversized_error_append_keeps_only_its_end_as_an_error():
+    buffer = OutputBuffer(maximum_character_count=3)
+    buffer.append("abc")
+    buffer.append("123456", is_error=True)
+    assert buffer.segments == (("456", True),)
+
+
+def test_appending_nothing_as_an_error_changes_nothing():
+    buffer = OutputBuffer(maximum_character_count=3)
+    buffer.append("", is_error=True)
+    assert buffer.segments == ()
+
+
+def test_clear_forgets_the_segments():
+    buffer = OutputBuffer(maximum_character_count=3)
+    buffer.append("abc", is_error=True)
+    buffer.clear()
+    assert buffer.segments == ()
+
+
+@pytest.mark.parametrize("cap", [1, 2, 7, 50])
+def test_the_discarded_text_is_exactly_the_missing_beginning_of_the_history(cap):
+    generator = random.Random(1000 + cap)
+    buffer = OutputBuffer(maximum_character_count=cap)
+    history = ""
+    all_discarded = ""
+    for _ in range(300):
+        chunk = "".join(generator.choice("abcdefghij\n") for _ in range(generator.randint(0, 3 * cap)))
+        all_discarded += buffer.append(chunk, is_error=generator.random() < 0.5)
+        history += chunk
+        assert all_discarded + buffer.text == history
+        assert "".join(text for text, _ in buffer.segments) == buffer.text
+
+
 @pytest.mark.parametrize("cap", [1, 2, 7, 50])
 def test_behaves_like_slicing_the_whole_history(cap):
     generator = random.Random(cap)

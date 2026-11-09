@@ -1,2 +1,1 @@
-def main() -> None:
-    print("Hello from mathdoer!")
+"""mathdoer: a calculator that executes the code you type."""

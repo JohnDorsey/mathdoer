@@ -28,3 +28,4 @@ Reference install of PrecCalc64: `E:\data-game-win10pro2\lock\portable\preccalc6
 
 - `uv run pytest` runs the tests.
 - `uv run mathdoer` starts the program.
+- Interface tests run on Qt's offscreen platform, which has no fonts and shows nothing. Check how the window really looks with a screenshot taken on the real platform.

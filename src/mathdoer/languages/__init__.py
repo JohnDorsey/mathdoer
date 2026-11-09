@@ -8,6 +8,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from mathdoer.registry import RegistryEntry
+
 IDENTIFIER_PATTERN = re.compile(r"[a-z][a-z0-9_]*")
 FILE_EXTENSION_PATTERN = re.compile(r"\.[A-Za-z0-9_]+")
 
@@ -21,6 +23,10 @@ class Language:
     # Given the path of the interpreter, returns the command that starts the worker.
     # The worker follows the protocol described in mathdoer.running.
     build_worker_command: Callable[[Path], list[str]]
+    # How a registry entry is written in this language: the name of the variable that holds
+    # it, and its value as a literal that can be typed anywhere an expression can.
+    format_name: Callable[[RegistryEntry], str]
+    format_literal: Callable[[RegistryEntry], str]
 
     def __post_init__(self):
         if not IDENTIFIER_PATTERN.fullmatch(self.identifier):

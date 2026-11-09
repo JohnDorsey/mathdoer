@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-mathdoer = "mathdoer:main"
+mathdoer = "mathdoer.application:main"
 
 [build-system]
 requires = ["uv_build>=0.13.6,<0.14.0"]

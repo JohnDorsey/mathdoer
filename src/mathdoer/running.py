@@ -76,6 +76,27 @@ _OUTCOMES_BY_EXIT_CODE = {
 }
 
 
+@dataclass(frozen=True)
+class RunSettings:
+    """Everything about a run except the prompt."""
+
+    language: Language
+    interpreter_path: Path
+    startup_path: Path
+    registry_path: Path
+    working_directory: Path
+
+    def start(self, prompt_text: str) -> "Run":
+        return Run(
+            language=self.language,
+            interpreter_path=self.interpreter_path,
+            prompt_text=prompt_text,
+            startup_path=self.startup_path,
+            registry_path=self.registry_path,
+            working_directory=self.working_directory,
+        )
+
+
 class Run:
     """One run of a prompt. Starts immediately; poll() returns the events so far."""
 

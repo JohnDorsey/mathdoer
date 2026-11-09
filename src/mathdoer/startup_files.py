@@ -25,10 +25,15 @@ def startup_file_path(language: Language, directory: Path) -> Path:
     return Path(directory) / language.startup_file_name
 
 
-def ensure_startup_file(language: Language, directory: Path) -> Path:
-    """Create the startup file from the bundled default if it does not exist; never overwrite."""
-    path = startup_file_path(language, directory)
+def create_startup_file_if_missing(language: Language, path: Path) -> Path:
+    """Create the startup file at the path from the bundled default if it does not exist;
+    never overwrite."""
+    path = Path(path)
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(language.default_startup_path, path)
     return path
+
+
+def ensure_startup_file(language: Language, directory: Path) -> Path:
+    return create_startup_file_if_missing(language, startup_file_path(language, directory))

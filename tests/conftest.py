@@ -1,4 +1,8 @@
 """Shared fixtures: start real worker processes and record what they report."""
+import os
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")  # before Qt is imported anywhere
+
 import sys
 import time
 from pathlib import Path
@@ -7,7 +11,7 @@ import pytest
 
 from mathdoer.languages.python import PYTHON
 from mathdoer.registry import shipped_registry_path
-from mathdoer.running import OutputText, Run, RunFinished
+from mathdoer.running import OutputText, RunFinished, RunSettings
 
 
 class RunRecorder:
@@ -68,29 +72,93 @@ class RunRecorder:
 
 
 @pytest.fixture
-def start_python_run(tmp_path):
-    """Start a Python run without waiting for it. Runs still going at teardown are cancelled."""
-    recorders = []
+def startup_value_of():
+    """The value the default Python startup file gives a registry entry: a whole number
+    written without a point or exponent is an int, anything else a float."""
 
-    def start(
-        prompt_text,
-        startup_text="",
-        working_directory=None,
-        interpreter_path=None,
-        registry_path=None,
-    ):
+    def value_of(entry):
+        return int(entry.value_text) if entry.value_text.isdigit() else float(entry.value)
+
+    return value_of
+
+
+@pytest.fixture
+def make_python_run_settings(tmp_path):
+    """Settings for Python runs in a temporary folder, with a startup file of the given text
+    (None leaves the startup file missing)."""
+
+    def make(startup_text="", working_directory=None, interpreter_path=None, registry_path=None):
         startup_path = tmp_path / PYTHON.startup_file_name
         if startup_text is not None:
             startup_path.write_text(startup_text, encoding="utf-8")
-        run = Run(
+        return RunSettings(
             language=PYTHON,
             interpreter_path=interpreter_path or Path(sys.executable),
-            prompt_text=prompt_text,
             startup_path=startup_path,
             registry_path=registry_path or shipped_registry_path(),
             working_directory=working_directory or tmp_path,
         )
-        recorder = RunRecorder(run)
+
+    return make
+
+
+class FakeClock:
+    """A clock the test moves by hand, so spinner and timer text is deterministic."""
+
+    def __init__(self):
+        self.now = 1000.0
+
+    def __call__(self):
+        return self.now
+
+    def advance(self, seconds):
+        self.now += seconds
+
+
+@pytest.fixture
+def fake_clock():
+    return FakeClock()
+
+
+@pytest.fixture
+def make_window(qtbot, make_python_run_settings, fake_clock):
+    """Show a main window, ready for key presses. Options for the run settings
+    (working_directory, interpreter_path, registry_path) and the startup file text are
+    passed to make_python_run_settings; the rest go to MainWindow."""
+    from mathdoer.interface.main_window import MainWindow
+
+    def make(startup_text="", **options):
+        settings_options = {
+            name: options.pop(name)
+            for name in ("working_directory", "interpreter_path", "registry_path")
+            if name in options
+        }
+        settings = make_python_run_settings(startup_text=startup_text, **settings_options)
+        window = MainWindow(settings, clock=fake_clock, **options)
+        qtbot.addWidget(window)
+        window.resize(900, 700)
+        window.show()
+        window.activateWindow()
+        # A window-level shortcut only fires once the window is active, and the
+        # offscreen platform finishes activating a moment after show().
+        qtbot.waitUntil(window.isActiveWindow, timeout=5000)
+        return window
+
+    return make
+
+
+@pytest.fixture
+def window(make_window):
+    return make_window()
+
+
+@pytest.fixture
+def start_python_run(make_python_run_settings):
+    """Start a Python run without waiting for it. Runs still going at teardown are cancelled."""
+    recorders = []
+
+    def start(prompt_text, **settings_options):
+        recorder = RunRecorder(make_python_run_settings(**settings_options).start(prompt_text))
         recorders.append(recorder)
         return recorder
 
