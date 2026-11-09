@@ -1,7 +1,9 @@
 """The Python language: its worker script and its default startup file."""
 from pathlib import Path
 
-from mathdoer.languages import Language
+from mathdoer.languages import EditingRules, Language
+from mathdoer.languages.python.editing import opens_indented_block
+from mathdoer.languages.python.lexer import lex_line
 from mathdoer.registry import RegistryEntry
 
 LANGUAGE_FOLDER = Path(__file__).parent
@@ -37,4 +39,11 @@ PYTHON = Language(
     build_worker_command=build_worker_command,
     format_name=format_name,
     format_literal=format_literal,
+    editing=EditingRules(
+        comment_prefix="#",
+        opens_indented_block=opens_indented_block,
+        bracket_pairs=(("(", ")"), ("[", "]"), ("{", "}")),
+        indent_width=4,
+    ),
+    lex_line=lex_line,
 )

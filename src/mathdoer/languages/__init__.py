@@ -4,14 +4,27 @@ Everything specific to one language lives in that language's own module, for exa
 mathdoer.languages.python. Code outside these modules stays language-neutral.
 """
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
 from mathdoer.registry import RegistryEntry
+from mathdoer.syntax import LexedLine
 
 IDENTIFIER_PATTERN = re.compile(r"[a-z][a-z0-9_]*")
 FILE_EXTENSION_PATTERN = re.compile(r"\.[A-Za-z0-9_]+")
+
+
+@dataclass(frozen=True)
+class EditingRules:
+    """What the editor needs to know to edit code in a language."""
+
+    comment_prefix: str
+    # Given the lines of the document and a position in it (line, column), does the code
+    # before that position open an indented block, so that a new line there is indented?
+    opens_indented_block: Callable[[Sequence[str], int, int], bool]
+    bracket_pairs: tuple[tuple[str, str], ...]
+    indent_width: int = 4
 
 
 @dataclass(frozen=True)
@@ -27,6 +40,9 @@ class Language:
     # it, and its value as a literal that can be typed anywhere an expression can.
     format_name: Callable[[RegistryEntry], str]
     format_literal: Callable[[RegistryEntry], str]
+    editing: EditingRules
+    # Splits one line into tokens, given the lexer's state at the start of the line.
+    lex_line: Callable[[str, int], LexedLine]
 
     def __post_init__(self):
         if not IDENTIFIER_PATTERN.fullmatch(self.identifier):

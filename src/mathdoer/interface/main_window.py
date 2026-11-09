@@ -5,14 +5,14 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QCloseEvent, QGuiApplication, QKeySequence, QShortcut
-from PySide6.QtWidgets import QMainWindow, QPlainTextEdit, QSplitter
+from PySide6.QtWidgets import QMainWindow, QSplitter
 
 from mathdoer import text_editor
 from mathdoer.interface.edit_menu import EditMenu
-from mathdoer.interface.fonts import monospace_font
 from mathdoer.interface.output_display import OutputDisplay
+from mathdoer.interface.prompt_editor import PromptEditor
 from mathdoer.interface.registry_menus import add_registry_menus
-from mathdoer.interface.styling import apply_menu_theme, text_box_palette, window_palette
+from mathdoer.interface.styling import apply_menu_theme, window_palette
 from mathdoer.interface.theme import DARK_THEME, Theme
 from mathdoer.output_buffer import DEFAULT_MAXIMUM_CHARACTER_COUNT, OutputBuffer
 from mathdoer.output_text import normalize_output_text
@@ -63,10 +63,7 @@ class MainWindow(QMainWindow):
         self.resize(*INITIAL_WINDOW_SIZE)
         self.setPalette(window_palette(theme))
 
-        self.prompt_box = QPlainTextEdit()
-        self.prompt_box.setFont(monospace_font())
-        self.prompt_box.setPalette(text_box_palette(self.prompt_box.palette(), theme))
-        self.prompt_box.setFrameShape(QPlainTextEdit.Shape.NoFrame)
+        self.prompt_box = PromptEditor(theme, run_settings.language)
         self.output_box = OutputDisplay(theme)
 
         splitter = QSplitter(Qt.Orientation.Vertical)

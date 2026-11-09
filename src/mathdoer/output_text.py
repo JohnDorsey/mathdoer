@@ -10,8 +10,3 @@ def normalize_output_text(text: str) -> str:
     except UnicodeEncodeError:
         text = text.encode("utf-16", "surrogatepass").decode("utf-16", "replace")
     return text
-
-
-def utf16_length(text: str) -> int:
-    """The length a Qt text box counts: characters outside the basic plane count twice."""
-    return len(text.encode("utf-16-le", "surrogatepass")) // 2

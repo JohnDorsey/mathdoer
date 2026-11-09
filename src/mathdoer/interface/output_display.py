@@ -3,12 +3,10 @@ from collections.abc import Iterable
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QTextCharFormat, QTextCursor
-from PySide6.QtWidgets import QFrame, QPlainTextEdit
 
-from mathdoer.interface.fonts import monospace_font
-from mathdoer.interface.styling import text_box_palette
+from mathdoer.interface.text_box import TextBox
 from mathdoer.interface.theme import Theme
-from mathdoer.output_text import utf16_length
+from mathdoer.utf16 import utf16_length
 
 PARAGRAPH_SEPARATORS = ("\n", " ")
 
@@ -17,7 +15,7 @@ def truncation_notice(discarded_character_count: int) -> str:
     return f"[output truncated: the oldest {discarded_character_count} characters were discarded]"
 
 
-class OutputDisplay(QPlainTextEdit):
+class OutputDisplay(TextBox):
     """Shows a run's output.
 
     The document is, in order: a truncation notice (once text has been discarded), the
@@ -25,7 +23,7 @@ class OutputDisplay(QPlainTextEdit):
     """
 
     def __init__(self, theme: Theme, parent=None):
-        super().__init__(parent)
+        super().__init__(theme, parent)
         self._notice = ""
         self._notice_length = 0
         self._progress_length = 0
@@ -38,9 +36,6 @@ class OutputDisplay(QPlainTextEdit):
         self.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse | Qt.TextInteractionFlag.TextSelectableByKeyboard
         )
-        self.setFrameShape(QFrame.Shape.NoFrame)
-        self.setFont(monospace_font())
-        self.setPalette(text_box_palette(self.palette(), theme))
 
     @staticmethod
     def _text_format(color: str) -> QTextCharFormat:

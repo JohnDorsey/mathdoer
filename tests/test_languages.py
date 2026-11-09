@@ -5,9 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from mathdoer.languages import Language
+from mathdoer.languages import EditingRules, Language
 from mathdoer.languages.python import PYTHON
+from mathdoer.languages.python.lexer import lex_line
 from mathdoer.registry import load_registry
+from mathdoer.syntax import LexedLine
 
 
 def make_language(**overrides):
@@ -19,6 +21,12 @@ def make_language(**overrides):
         build_worker_command=lambda interpreter_path: [str(interpreter_path), "worker"],
         format_name=lambda entry: entry.name.lower(),
         format_literal=lambda entry: entry.value_text,
+        editing=EditingRules(
+            comment_prefix="//",
+            opens_indented_block=lambda lines, line, column: False,
+            bracket_pairs=(("(", ")"),),
+        ),
+        lex_line=lambda text, state: LexedLine((), 0),
     )
     fields.update(overrides)
     return Language(**fields)
@@ -63,6 +71,17 @@ def test_a_language_decides_how_its_names_and_literals_are_written():
     language = make_language()
     assert language.format_name(entry) == "inch"
     assert language.format_literal(entry) == "0.0254"
+
+
+def test_a_language_describes_how_to_edit_and_lex_its_code():
+    language = make_language()
+    assert language.editing.comment_prefix == "//"
+    assert language.editing.indent_width == 4
+    assert language.lex_line("anything", 0) == LexedLine((), 0)
+
+
+def test_python_lexes_with_its_own_lexer():
+    assert PYTHON.lex_line is lex_line
 
 
 def test_python_names_are_the_registry_names():
