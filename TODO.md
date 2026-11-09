@@ -28,23 +28,23 @@ First version.
   - [x] Constants and Units: click inserts the name; Shift+click inserts the literal value (Alt+click was tried: Windows closes the menu when Alt is pressed)
   - [x] Edit: Undo, Redo, Cut, Copy, Paste, Select all, Copy output, Edit startup file
 - [x] Prompt box (top, editable) and output box (bottom, read-only but selectable and copyable) with a draggable splitter; resizable window
-- [ ] Dark, high-contrast theme (first palette built for the boxes and the splitter and awaiting approval; syntax colors come with the editor)
+- [x] Dark, high-contrast theme (every text color is tested for at least 7:1 contrast; the syntax colors await approval)
 - [ ] Prompt box editing behaviors
-  - [ ] Indentation guides
-  - [ ] Tab inserts spaces; Shift+Tab dedents; Tab and Shift+Tab work on a selection
-  - [ ] Auto-indent after a colon
-  - [ ] Toggle comment (Ctrl+/)
-  - [ ] Duplicate line (Ctrl+D)
-  - [ ] Move line up and down (Alt+Up, Alt+Down)
-  - [ ] Delete line (Ctrl+Shift+K)
-  - [ ] Smart Home; Ctrl+Left/Right and Ctrl+Backspace/Delete by word
-  - [ ] Undo and redo
-  - [ ] Syntax highlighting; matching-bracket highlight
-  - [ ] Line numbers
+  - [x] Indentation guides (they run through blank lines and cover only the first row of a wrapped line)
+  - [x] Tab inserts spaces; Shift+Tab dedents; Tab and Shift+Tab work on a selection
+  - [x] Auto-indent after a colon
+  - [x] Toggle comment (Ctrl+/)
+  - [x] Duplicate line (Ctrl+D)
+  - [x] Move line up and down (Alt+Up, Alt+Down)
+  - [x] Delete line (Ctrl+Shift+K)
+  - [x] Smart Home; Ctrl+Left/Right and Ctrl+Backspace/Delete by word
+  - [x] Undo and redo
+  - [x] Syntax highlighting; matching-bracket highlight
+  - [x] Line numbers
   - [ ] Find and replace as an inline bar (Ctrl+F, Ctrl+H, F3, Esc), prompt box only
-  - [ ] Zoom
-  - [ ] Monospace font; word wrap on, toggled with Alt+Z
-  - [ ] No auto-closing brackets or quotes
+  - [x] Zoom (Ctrl with +, - and 0, and Ctrl with the mouse wheel; both boxes together)
+  - [x] Monospace font; word wrap on, toggled with Alt+Z in the box that has the focus
+  - [x] No auto-closing brackets or quotes
 - [x] GPL-3.0-or-later license
 - [ ] Windows first, Python 3.11 or later
 
@@ -55,6 +55,8 @@ First version.
   - [ ] Evaluate the irrational registry entries (Stefan-Boltzmann constant, parsec) from their formulas at any requested precision; the stored 100 digits are a floor, not the limit
   - [ ] Decide what Shift+click inserts for very long values (the two irrational entries have 100 digits)
 - [ ] Make the separators between menu groups easier to see in the dark theme (they are almost invisible; Fusion draws them faintly)
+- [ ] Auto-indent after an opening bracket (today only a colon adds a level)
+- [ ] Make Enter quicker on very large prompts (it lexes every earlier line; 45 ms at 4,300 lines)
 - [ ] Languages other than Python (the interface always stays Python)
 - [ ] Setting for a configurable interpreter that runs the prompt
 - [ ] Reset the startup file to the bundled default
