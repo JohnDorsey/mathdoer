@@ -4,9 +4,11 @@ from typing import NamedTuple
 
 from PySide6.QtCore import QEvent, QRect, QSize, Qt
 from PySide6.QtGui import QColor, QKeyEvent, QPainter, QPaintEvent, QResizeEvent, QTextBlock, QTextCursor, QTextDocument
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QTextEdit, QWidget
 
+from mathdoer.bracket_matching import find_bracket_pair
 from mathdoer.indentation_guides import guide_columns
+from mathdoer.interface.syntax_highlighter import SyntaxHighlighter
 from mathdoer.interface.text_box import TextBox
 from mathdoer.interface.theme import Theme
 from mathdoer.languages import Language
@@ -80,12 +82,49 @@ class PromptEditor(TextBox):
     def __init__(self, theme: Theme, language: Language, parent=None):
         super().__init__(theme, parent)
         self._theme = theme
+        self._language = language
         self._rules = language.editing
+        self._bracket_selections: list[QTextEdit.ExtraSelection] = []
         self.gutter = _LineNumberGutter(self)
+        self._highlighter = SyntaxHighlighter(self.document(), language, theme)
         self.blockCountChanged.connect(self._update_gutter_width)
         self.updateRequest.connect(self._scroll_gutter)
+        self.cursorPositionChanged.connect(self._update_bracket_highlight)
+        self.textChanged.connect(self._update_bracket_highlight)
         self._ready = True
         self._font_changed()
+
+    # ----------------------------------------------------------- bracket highlight
+
+    def _update_bracket_highlight(self) -> None:
+        position = self._position_of(self.textCursor().position())
+        pair = find_bracket_pair(
+            _DocumentLines(self.document()),
+            position,
+            self._rules,
+            self._language.lex_line,
+            state_before=self._lexer_state_before_line,
+        )
+        self._bracket_selections = []
+        if pair is not None:
+            for bracket in (pair.first, pair.second):
+                start = self._qt_position_of(bracket)
+                selection = QTextEdit.ExtraSelection()
+                selection.format.setBackground(QColor(self._theme.matching_bracket_background))
+                selection.cursor = QTextCursor(self.document())
+                selection.cursor.setPosition(start)
+                selection.cursor.setPosition(start + 1, QTextCursor.MoveMode.KeepAnchor)
+                self._bracket_selections.append(selection)
+        self._refresh_extra_selections()
+
+    def _refresh_extra_selections(self) -> None:
+        self.setExtraSelections(self._bracket_selections)
+
+    def _lexer_state_before_line(self, index: int) -> int:
+        """The state the highlighter left at the end of the line before, kept with that line."""
+        if index == 0:
+            return 0
+        return max(self.document().findBlockByNumber(index - 1).userState(), 0)
 
     # ------------------------------------------------------------ line numbers
 

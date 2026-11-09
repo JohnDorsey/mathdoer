@@ -1,6 +1,9 @@
 """Colors of the interface. Qt-free, so the contrast of a theme can be tested."""
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
+
+from mathdoer.syntax import TokenKind
 
 HEX_COLOR_PATTERN = re.compile(r"#[0-9a-fA-F]{6}")
 
@@ -20,6 +23,10 @@ class Theme:
     line_number_text: str  # Notepad++: "Line number margin"
     line_number_background: str
     indentation_guide: str  # Notepad++: "Indent guideline style"
+    matching_bracket_background: str  # Notepad++: "Brace highlight style"
+    # One color for each kind of text the lexer reports; Notepad++'s per-language styles
+    # (COMMENTLINE, NUMBER, STRING, WORD, WORD2, DEFNAME, CLASSNAME, DECORATOR, OPERATOR) map to them.
+    token_colors: Mapping[TokenKind, str]
 
 
 # Dark with high contrast: every text color is at least 7:1 against its background.
@@ -37,6 +44,18 @@ DARK_THEME = Theme(
     line_number_text="#b0b0b0",
     line_number_background="#161616",
     indentation_guide="#606060",
+    matching_bracket_background="#0c5c4e",
+    token_colors={
+        TokenKind.COMMENT: "#7ee787",
+        TokenKind.STRING: "#ffb454",
+        TokenKind.NUMBER: "#b5a4ff",
+        TokenKind.KEYWORD: "#ff7ab2",
+        TokenKind.BUILTIN: "#6fd7ff",
+        TokenKind.FUNCTION_NAME: "#ffe27a",
+        TokenKind.CLASS_NAME: "#5eead4",
+        TokenKind.DECORATOR: "#f2a0ff",
+        TokenKind.OPERATOR: "#ffffff",
+    },
 )
 
 
