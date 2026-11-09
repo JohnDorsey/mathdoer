@@ -240,7 +240,7 @@ def test_the_edit_menu_is_laid_out_in_groups(window):
         "Undo", "Redo", "-",
         "Cut", "Copy", "Paste", "Select all", "-",
         "Copy output", "-",
-        "Edit startup file", "Edit settings",
+        "Settings…", "Edit startup file", "Edit Python settings file",
     ]
 
 
@@ -254,7 +254,7 @@ def test_shortcut_hints_are_shown_but_are_not_real_shortcuts(window):
         action = action_named(menu, name)
         assert action.text() == f"{name}\t{hint}"
         assert action.shortcut().isEmpty(), name  # the text boxes handle these keys themselves
-    for name in ("Copy output", "Edit startup file", "Edit settings"):
+    for name in ("Copy output", "Settings…", "Edit startup file", "Edit Python settings file"):
         assert "\t" not in action_named(menu, name).text()
 
 
@@ -454,38 +454,38 @@ def test_a_failure_to_open_the_editor_is_reported_in_the_output_box(make_window)
 
 # ------------------------------------------------------------------------- settings
 
-def test_edit_settings_is_always_enabled(window):
+def test_edit_python_settings_file_is_always_enabled(window):
     menu = top_level_menu(window, "Edit")
     open_menu(menu)
-    assert action_named(menu, "Edit settings").isEnabled()
+    assert action_named(menu, "Edit Python settings file").isEnabled()
 
 
-def test_edit_settings_creates_the_settings_file_from_the_default_and_opens_it(make_window):
+def test_edit_python_settings_file_creates_the_settings_file_from_the_default_and_opens_it(make_window):
     opened = []
     window = make_window(open_in_text_editor=opened.append)
-    assert not window.settings_path.exists()
-    action_named(top_level_menu(window, "Edit"), "Edit settings").trigger()
-    assert window.settings_path.name == "settings_python.toml"
-    assert window.settings_path.read_text(encoding="utf-8") == PYTHON.default_settings_path.read_text(
+    assert not window.language_settings_path.exists()
+    action_named(top_level_menu(window, "Edit"), "Edit Python settings file").trigger()
+    assert window.language_settings_path.name == "settings_python.toml"
+    assert window.language_settings_path.read_text(encoding="utf-8") == PYTHON.default_settings_path.read_text(
         encoding="utf-8"
     )
-    assert opened == [window.settings_path]
+    assert opened == [window.language_settings_path]
 
 
-def test_edit_settings_does_not_touch_the_startup_file(make_window):
+def test_edit_python_settings_file_does_not_touch_the_startup_file(make_window):
     opened = []
     window = make_window(startup_text="MINE = 1\n", open_in_text_editor=opened.append)
-    action_named(top_level_menu(window, "Edit"), "Edit settings").trigger()
+    action_named(top_level_menu(window, "Edit"), "Edit Python settings file").trigger()
     assert opened != [window.startup_path]
     assert window.startup_path.read_text(encoding="utf-8") == "MINE = 1\n"
 
 
-def test_edit_settings_leaves_an_existing_settings_file_alone(make_window):
+def test_edit_python_settings_file_leaves_an_existing_settings_file_alone(make_window):
     opened = []
     window = make_window(settings_text="# mine\n", open_in_text_editor=opened.append)
-    action_named(top_level_menu(window, "Edit"), "Edit settings").trigger()
-    assert window.settings_path.read_text(encoding="utf-8") == "# mine\n"
-    assert opened == [window.settings_path]
+    action_named(top_level_menu(window, "Edit"), "Edit Python settings file").trigger()
+    assert window.language_settings_path.read_text(encoding="utf-8") == "# mine\n"
+    assert opened == [window.language_settings_path]
 
 
 def test_a_failure_to_open_the_settings_file_is_reported_in_the_output_box(make_window):
@@ -493,5 +493,18 @@ def test_a_failure_to_open_the_settings_file_is_reported_in_the_output_box(make_
         raise OSError("no editor is installed")
 
     window = make_window(open_in_text_editor=cannot_open)
-    action_named(top_level_menu(window, "Edit"), "Edit settings").trigger()
-    assert window.output_box.toPlainText() == "[could not open the settings file: no editor is installed]"
+    action_named(top_level_menu(window, "Edit"), "Edit Python settings file").trigger()
+    assert window.output_box.toPlainText() == "[could not open the Python settings file: no editor is installed]"
+
+
+# --------------------------------------------------------------------- Settings window
+
+def test_settings_is_always_enabled_and_opens_the_settings_window(window):
+    menu = top_level_menu(window, "Edit")
+    open_menu(menu)
+    action = action_named(menu, "Settings…")
+    assert action.isEnabled()
+    assert window.settings_window is None
+    action.trigger()
+    assert window.settings_window.isVisible()
+    assert window.settings_window.windowTitle() == "Settings"

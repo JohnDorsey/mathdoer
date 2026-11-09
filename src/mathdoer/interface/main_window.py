@@ -17,6 +17,7 @@ from mathdoer.interface.find_bar import FindBar
 from mathdoer.interface.prompt_editor import PromptEditor
 from mathdoer.interface.prompt_pane import PromptPane
 from mathdoer.interface.registry_menus import add_registry_menus
+from mathdoer.interface.settings_window import SettingsWindow
 from mathdoer.interface.styling import apply_menu_theme, window_palette
 from mathdoer.interface.theme import DARK_THEME, Theme
 from mathdoer.interface_settings import DEFAULT_INTERFACE_SETTINGS, InterfaceSettings, write_interface_settings
@@ -72,6 +73,8 @@ class MainWindow(QMainWindow):
         super().__init__(parent)
         self._interface_settings = interface_settings
         self._interface_settings_path = interface_settings_path
+        self._theme = theme
+        self._settings_window: SettingsWindow | None = None
         self._run_settings = run_settings
         self._clock = clock
         self._keyboard_modifiers = keyboard_modifiers
@@ -105,8 +108,10 @@ class MainWindow(QMainWindow):
             self.prompt_box,
             self.output_box,
             self._active_box,
+            self.open_settings_window,
             self._edit_startup_file,
-            self._edit_settings,
+            self._edit_language_settings_file,
+            run_settings.language.display_name,
         )
         add_registry_menus(
             self.menuBar(),
@@ -159,7 +164,7 @@ class MainWindow(QMainWindow):
         return self._run_settings.startup_path
 
     @property
-    def settings_path(self) -> Path:
+    def language_settings_path(self) -> Path:
         return self._run_settings.settings_path
 
     @property
@@ -169,6 +174,29 @@ class MainWindow(QMainWindow):
     @property
     def interface_settings_path(self) -> Path | None:
         return self._interface_settings_path
+
+    @property
+    def settings_window(self) -> SettingsWindow | None:
+        """The settings window, once it has been opened."""
+        return self._settings_window
+
+    def open_settings_window(self) -> None:
+        """Show the settings window, making it the first time. It stays in step with the settings."""
+        if self._settings_window is None:
+            self._settings_window = SettingsWindow(
+                self._interface_settings, self._theme, self.current_window_size, parent=self
+            )
+            self._settings_window.settings_changed.connect(self.change_interface_settings)
+            self.interface_settings_changed.connect(self._settings_window.set_settings)
+        self._settings_window.show()
+        self._settings_window.raise_()
+        self._settings_window.activateWindow()
+
+    def current_window_size(self) -> tuple[int, int]:
+        """The width and height of the window; for a window that is maximized or full screen,
+        the size it goes back to."""
+        size = self.normalGeometry().size() if self.isMaximized() or self.isFullScreen() else self.size()
+        return size.width(), size.height()
 
     @property
     def find_bar(self) -> FindBar:
@@ -230,9 +258,10 @@ class MainWindow(QMainWindow):
             "startup file", self._run_settings.language.default_startup_path, self._run_settings.startup_path
         )
 
-    def _edit_settings(self) -> None:
+    def _edit_language_settings_file(self) -> None:
+        language = self._run_settings.language
         self._open_user_file(
-            "settings file", self._run_settings.language.default_settings_path, self._run_settings.settings_path
+            f"{language.display_name} settings file", language.default_settings_path, self._run_settings.settings_path
         )
 
     def _open_user_file(self, description: str, default_path: Path, path: Path) -> None:
@@ -302,4 +331,6 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event: QCloseEvent) -> None:
         self.cancel_run()
         self._timer.stop()
+        if self._settings_window is not None:
+            self._settings_window.close()
         super().closeEvent(event)

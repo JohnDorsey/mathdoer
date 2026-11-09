@@ -1,7 +1,8 @@
 """Tests for the interface settings as they apply to the window: zoom, find, wrapping and saving."""
 from dataclasses import replace
 
-from PySide6.QtCore import QPoint, QPointF, Qt
+import pytest
+from PySide6.QtCore import QPoint, QPointF, QRect, QSize, Qt
 from PySide6.QtGui import QWheelEvent
 from settings_helpers import every_feature_off
 
@@ -191,3 +192,86 @@ def test_running_still_works_with_every_feature_off(qtbot, window):
     qtbot.waitUntil(lambda: not window.is_running, timeout=20000)
     assert window.output_box.output_text().strip() == "42"
     assert window.prompt_box.toPlainText() == "6 * 7"  # Ctrl+Enter is not a new line
+
+
+# ---------------------------------------------------------------- the settings window
+
+def test_the_settings_window_opens_once_and_shows_the_current_settings(make_window):
+    window = make_window(interface_settings=settings_with(show_line_numbers=False))
+    assert window.settings_window is None
+    window.open_settings_window()
+    dialog = window.settings_window
+    assert dialog.isVisible()
+    assert not dialog.checkbox_for("show_line_numbers").isChecked()
+    window.open_settings_window()
+    assert window.settings_window is dialog
+
+
+def test_a_settings_window_that_was_closed_opens_again_showing_the_settings_of_the_time(window):
+    window.open_settings_window()
+    dialog = window.settings_window
+    dialog.close_button.click()
+    window.change_interface_settings(settings_with(show_line_numbers=False))
+    window.open_settings_window()
+    assert dialog.isVisible()
+    assert not dialog.checkbox_for("show_line_numbers").isChecked()
+
+
+def test_a_checkbox_in_the_settings_window_changes_the_boxes_and_saves_the_file(window):
+    window.open_settings_window()
+    window.settings_window.show_page("Display")
+    window.settings_window.checkbox_for("show_line_numbers").click()
+    assert window.prompt_box.gutter_width() == 0
+    assert window.interface_settings == settings_with(show_line_numbers=False)
+    assert saved_settings(window) == settings_with(show_line_numbers=False)
+
+
+def test_the_settings_window_follows_a_change_made_elsewhere(window):
+    """Alt+Z turns wrapping off in the box, and the checkbox must say so."""
+    window.open_settings_window()
+    window.prompt_box.setFocus()
+    window.toggle_word_wrap()
+    assert not window.settings_window.checkbox_for("wrap_prompt_box_lines").isChecked()
+    assert window.settings_window.checkbox_for("wrap_output_box_lines").isChecked()
+
+
+def test_restore_defaults_in_the_settings_window_restores_the_boxes_and_the_file(window):
+    window.change_interface_settings(every_feature_off())
+    assert window.prompt_box.gutter_width() == 0
+    window.open_settings_window()
+    window.settings_window.restore_defaults_button.click()
+    assert window.interface_settings == DEFAULT_INTERFACE_SETTINGS
+    assert window.prompt_box.gutter_width() > 0
+    assert saved_settings(window) == DEFAULT_INTERFACE_SETTINGS
+
+
+def test_use_current_size_takes_the_size_of_the_main_window(window):
+    window.resize(1111, 777)
+    window.open_settings_window()
+    window.settings_window.use_current_size_button.click()
+    assert (window.interface_settings.window_width, window.interface_settings.window_height) == (1111, 777)
+    assert (saved_settings(window).window_width, saved_settings(window).window_height) == (1111, 777)
+
+
+def test_the_current_window_size_is_the_size_of_the_window(window):
+    window.resize(1111, 777)
+    assert window.current_window_size() == (1111, 777)
+
+
+@pytest.mark.parametrize("state_method", ["isMaximized", "isFullScreen"])
+def test_the_current_size_of_a_maximized_or_full_screen_window_is_the_size_it_goes_back_to(
+    window, monkeypatch, state_method
+):
+    """The offscreen platform has no window manager to resize a maximized window, so the state
+    is stood in for. On the real platform a maximized window of 1000 by 650 reported 1920 by
+    1057 from size() and 1000 by 650 from normalGeometry()."""
+    monkeypatch.setattr(window, state_method, lambda: True)
+    monkeypatch.setattr(window, "size", lambda: QSize(1920, 1057))
+    monkeypatch.setattr(window, "normalGeometry", lambda: QRect(10, 10, 1000, 650))
+    assert window.current_window_size() == (1000, 650)
+
+
+def test_closing_the_main_window_closes_the_settings_window(window):
+    window.open_settings_window()
+    window.close()
+    assert window.settings_window.isHidden()

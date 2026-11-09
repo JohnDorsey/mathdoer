@@ -17,8 +17,10 @@ class EditMenu:
         prompt_box: QPlainTextEdit,
         output_box: QPlainTextEdit,
         tracker: ActiveBoxTracker,
+        open_settings_window: Callable[[], None],
         edit_startup_file: Callable[[], None],
-        edit_settings: Callable[[], None],
+        edit_language_settings_file: Callable[[], None],
+        language_name: str,
     ):
         self._prompt_box = prompt_box
         self._output_box = output_box
@@ -35,8 +37,9 @@ class EditMenu:
         self.menu.addSeparator()
         self._copy_output = self._add("Copy output", None, self._copy_the_output)
         self.menu.addSeparator()
+        self._add("Settings…", None, open_settings_window)
         self._add("Edit startup file", None, edit_startup_file)
-        self._add("Edit settings", None, edit_settings)
+        self._add(f"Edit {language_name} settings file", None, edit_language_settings_file)
         self.menu.aboutToShow.connect(self._update_enabled_states)
 
     def _add(self, text: str, shortcut_hint: str | None, handler: Callable[[], None]) -> QAction:

@@ -199,7 +199,7 @@ def test_fixing_the_settings_file_fixes_the_next_run_without_restarting(qtbot, m
     window = make_window(settings_text="interpreter = 'mathdoer_no_such_program'\n")
     assert "not found" in run_to_the_end(qtbot, window, "print('fine')")
     wrapper = make_wrapper_interpreter()
-    window.settings_path.write_text(f"interpreter = '{wrapper}'\n", encoding="utf-8")
+    window.language_settings_path.write_text(f"interpreter = '{wrapper}'\n", encoding="utf-8")
     assert run_to_the_end(qtbot, window, "import os\nprint(os.environ['MATHDOER_TEST_WRAPPER'])") == "yes\n"
 
 
