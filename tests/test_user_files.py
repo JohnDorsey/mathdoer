@@ -9,6 +9,7 @@ from mathdoer.user_files import (
     create_file_if_missing,
     create_startup_file_if_missing,
     ensure_startup_file,
+    interface_settings_file_path,
     settings_file_path,
     startup_file_path,
     user_configuration_directory,
@@ -91,6 +92,12 @@ def test_ensure_keeps_an_empty_file_the_user_made_on_purpose(tmp_path):
 
 def test_the_settings_file_path_is_the_language_settings_file_name_in_the_directory(tmp_path):
     assert settings_file_path(PYTHON, tmp_path) == tmp_path / "settings_python.toml"
+
+
+def test_the_interface_settings_file_path_is_in_the_directory_and_cannot_be_taken_for_a_language_file(tmp_path):
+    path = interface_settings_file_path(tmp_path)
+    assert path == tmp_path / "interface_settings.toml"
+    assert path.name not in (settings_file_path(PYTHON, tmp_path).name, startup_file_path(PYTHON, tmp_path).name)
 
 
 def test_a_missing_file_is_created_with_its_parent_folders_from_the_given_default(tmp_path):

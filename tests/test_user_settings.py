@@ -160,6 +160,13 @@ def test_an_unescaped_backslash_gets_a_hint_about_single_quotes(settings_path):
     assert "single quotes" in message
 
 
+def test_a_byte_order_mark_at_the_start_of_the_file_is_skipped(settings_path, make_fake_interpreter):
+    """Some editors put one at the start of a UTF-8 file; it is not part of the first line."""
+    interpreter = make_fake_interpreter()
+    settings_path.write_bytes(b"\xef\xbb\xbf" + f"interpreter = '{interpreter}'\n".encode("utf-8"))
+    assert resolve(settings_path) == interpreter
+
+
 def test_a_file_that_is_not_utf8_is_an_error_naming_the_file(settings_path):
     settings_path.write_bytes(b"interpreter = '\xff\xfe'\n")
     message = error_message_for(settings_path)

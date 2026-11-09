@@ -663,18 +663,18 @@ def raises_if_asked(lines, line, column):
 
 
 def test_tab_inserts_a_tab_character_when_asked_to():
-    assert result(["x"], indent(["x"], P(0, 0), P(0, 0), RULES, use_tab_character=True)) == (["	x"], P(0, 1), P(0, 1))
-    assert result([""], indent([""], P(0, 0), P(0, 0), RULES, use_tab_character=True)) == (["	"], P(0, 1), P(0, 1))
+    assert result(["x"], indent(["x"], P(0, 0), P(0, 0), RULES, use_tab_character=True)) == (["\tx"], P(0, 1), P(0, 1))
+    assert result([""], indent([""], P(0, 0), P(0, 0), RULES, use_tab_character=True)) == (["\t"], P(0, 1), P(0, 1))
 
 
 def test_tab_inserts_a_tab_character_in_the_middle_of_text_when_asked_to():
     edit = indent(["abcd"], P(0, 1), P(0, 1), RULES, use_tab_character=True)
-    assert result(["abcd"], edit) == (["a	bcd"], P(0, 2), P(0, 2))
+    assert result(["abcd"], edit) == (["a\tbcd"], P(0, 2), P(0, 2))
 
 
 def test_tab_over_a_selection_inside_one_line_replaces_it_with_a_tab_character_when_asked_to():
     edit = indent(["hello"], P(0, 1), P(0, 4), RULES, use_tab_character=True)
-    assert result(["hello"], edit) == (["h	o"], P(0, 2), P(0, 2))
+    assert result(["hello"], edit) == (["h\to"], P(0, 2), P(0, 2))
 
 
 def test_tab_inside_the_spaces_of_a_line_indented_with_spaces_still_inserts_spaces():
@@ -693,18 +693,18 @@ def test_tab_inside_the_spaces_of_a_line_indented_with_spaces_still_inserts_spac
 
 def test_tab_after_the_text_of_a_line_indented_with_spaces_inserts_a_tab_character_when_asked_to():
     edit = indent(["    x"], P(0, 5), P(0, 5), RULES, use_tab_character=True)
-    assert result(["    x"], edit) == (["    x	"], P(0, 6), P(0, 6))
+    assert result(["    x"], edit) == (["    x\t"], P(0, 6), P(0, 6))
 
 
 def test_tab_over_several_lines_gives_each_line_the_style_of_its_own_indentation():
-    lines = ["a", "  b", "	c", ""]
+    lines = ["a", "  b", "\tc", ""]
     edit = indent(lines, P(0, 0), P(3, 0), RULES, use_tab_character=True)
     assert (edit.first_line, edit.last_line) == (0, 2)
-    assert result(lines, edit)[0] == ["	a", "    b", "		c", ""]
+    assert result(lines, edit)[0] == ["\ta", "    b", "\t\tc", ""]
 
 
 def test_the_default_for_tab_characters_is_off():
-    lines = ["a", "  b", "	c"]
+    lines = ["a", "  b", "\tc"]
     assert indent(lines, P(0, 0), P(2, 1), RULES) == indent(lines, P(0, 0), P(2, 1), RULES, use_tab_character=False)
 
 
@@ -713,7 +713,7 @@ def test_tab_insertion_is_what_a_single_line_indent_inserts():
     never differ from what the indent command would have inserted."""
     generator = random.Random(33)
     for _ in range(300):
-        line = "".join(generator.choice(" 	ab") for _ in range(generator.randint(0, 10)))
+        line = "".join(generator.choice(" \tab") for _ in range(generator.randint(0, 10)))
         column = generator.randint(0, len(line))
         for use_tab_character in (False, True):
             inserted = tab_insertion(line, column, RULES, use_tab_character=use_tab_character)
@@ -723,7 +723,7 @@ def test_tab_insertion_is_what_a_single_line_indent_inserts():
 
 def test_enter_after_a_colon_adds_a_tab_character_to_an_unindented_line_when_asked_to():
     edit = insert_newline(["if x:"], P(0, 5), P(0, 5), RULES, use_tab_character=True)
-    assert result(["if x:"], edit) == (["if x:", "	"], P(1, 1), P(1, 1))
+    assert result(["if x:"], edit) == (["if x:", "\t"], P(1, 1), P(1, 1))
 
 
 def test_enter_after_a_colon_adds_spaces_to_a_line_indented_with_spaces_even_when_asked_for_tabs():
@@ -733,8 +733,8 @@ def test_enter_after_a_colon_adds_spaces_to_a_line_indented_with_spaces_even_whe
 
 def test_enter_after_a_colon_in_a_tab_indented_line_adds_a_tab_whatever_is_asked():
     for use_tab_character in (False, True):
-        edit = insert_newline(["	if x:"], P(0, 6), P(0, 6), RULES, use_tab_character=use_tab_character)
-        assert result(["	if x:"], edit) == (["	if x:", "		"], P(1, 2), P(1, 2))
+        edit = insert_newline(["\tif x:"], P(0, 6), P(0, 6), RULES, use_tab_character=use_tab_character)
+        assert result(["\tif x:"], edit) == (["\tif x:", "\t\t"], P(1, 2), P(1, 2))
 
 
 def test_enter_after_a_colon_adds_no_level_when_block_openings_are_off():

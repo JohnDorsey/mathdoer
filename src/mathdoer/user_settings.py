@@ -10,6 +10,8 @@ import shutil
 import tomllib
 from pathlib import Path
 
+from mathdoer.toml_files import read_toml_file
+
 INTERPRETER_SETTING = "interpreter"
 KNOWN_SETTINGS = (INTERPRETER_SETTING,)
 
@@ -43,8 +45,7 @@ def resolve_interpreter(
 
 def _read_settings(settings_path: Path) -> dict:
     try:
-        with open(settings_path, "rb") as settings_file:
-            return tomllib.load(settings_file)
+        return read_toml_file(settings_path)
     except FileNotFoundError:
         return {}
     except tomllib.TOMLDecodeError as error:

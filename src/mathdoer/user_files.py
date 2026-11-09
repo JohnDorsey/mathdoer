@@ -7,6 +7,7 @@ from pathlib import Path
 from mathdoer.languages import Language
 
 APPLICATION_DIRECTORY_NAME = "mathdoer"
+INTERFACE_SETTINGS_FILE_NAME = "interface_settings.toml"
 
 
 def user_configuration_directory() -> Path:
@@ -27,6 +28,12 @@ def startup_file_path(language: Language, directory: Path) -> Path:
 
 def settings_file_path(language: Language, directory: Path) -> Path:
     return Path(directory) / language.settings_file_name
+
+
+def interface_settings_file_path(directory: Path) -> Path:
+    """The settings of the interface are the same whatever the language, and the settings window
+    writes them; the name keeps the file apart from a language's settings file."""
+    return Path(directory) / INTERFACE_SETTINGS_FILE_NAME
 
 
 def create_file_if_missing(default_path: Path, path: Path) -> Path:
