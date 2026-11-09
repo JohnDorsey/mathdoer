@@ -198,7 +198,8 @@ def test_the_bundled_default_settings_file_is_valid_and_sets_nothing():
 def test_the_bundled_default_settings_file_explains_the_interpreter_setting_and_quoting():
     text = PYTHON.default_settings_path.read_text(encoding="utf-8")
     assert "# interpreter = " in text
-    assert "single quotes" in text
+    comment_words = " ".join(line.lstrip("# ").strip() for line in text.splitlines())  # ignores line wrapping
+    assert "single quotes" in comment_words
 
 
 def test_the_commented_example_in_the_default_file_is_valid_once_uncommented():
