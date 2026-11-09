@@ -4,18 +4,22 @@
 
 First version.
 
-- [ ] Run the prompt in a separate process with a clean namespace on every run
-  - [ ] Run the startup file first, in the same namespace
+- [x] Run the prompt in a separate process with a clean namespace on every run (no interface yet)
+  - [x] Run the startup file first, in the same namespace
+  - [x] Show the value of the last expression, as a REPL does; `print` also works
+  - [x] Show errors as a trimmed traceback with line numbers matching the prompt; errors in the startup file are labelled as such and the prompt is not run
+  - [x] Output streams live; cancelling stops the run and everything it started
+  - [x] Output buffer with a size cap: when it overflows the oldest text is discarded
+  - [x] `input()` fails with a clear message
+- [ ] Interface for running
   - [ ] Ctrl+Enter runs; Shift+Esc cancels a running prompt and marks the output as cancelled
-  - [ ] Show the value of the last expression, as a REPL does; `print` also works
-  - [ ] Show errors as a trimmed traceback with line numbers matching the prompt box; errors in the startup file are labelled as such and the prompt is not run
-  - [ ] Output streams live; when it exceeds a size cap the oldest text is discarded and a truncation notice is shown
+  - [ ] The output box shows a truncation notice when the output buffer has discarded text
   - [ ] A spinner (`/ - \ |`) is shown in the output while running; after 5 seconds without a result it is followed by a counter of elapsed time: `00:05`, then `hh:mm:ss` from one hour, then `d:hh:mm:ss` from one day
-  - [ ] `input()` fails with a clear message
-- [ ] Keep internals and names language-neutral: everything specific to Python (startup file, literals, comment syntax, running the code) lives in a Python language module, so other languages can be added later; the interface stays Python
-- [ ] Startup file (Python's), created for the user from a bundled default
-  - [ ] `from math import *`, then `from builtins import pow` with a note explaining why (`math.pow` would otherwise turn `pow(2, 100)` into a float)
-  - [ ] Code that reads the registry and defines every constant and unit as a SCREAMING_SNAKE_CASE variable
+  - [ ] Output is cleared when a new run starts; error text is shown in red
+- [ ] Keep internals and names language-neutral (ongoing): everything specific to Python (startup file, literals, comment syntax, running the code) lives in a Python language module, so other languages can be added later; the interface stays Python
+- [x] Startup file (Python's), created for the user from a bundled default
+  - [x] `from math import *`, then `from builtins import pow` with a note explaining why (`math.pow` would otherwise turn `pow(2, 100)` into a float)
+  - [x] Code that reads the registry and defines every constant and unit as a SCREAMING_SNAKE_CASE variable
   - [ ] Edit > Edit startup file opens it in the system's editor for `.txt` files
 - [x] Registry of constants and units (TOML, language-neutral), the single source for the menus and the startup file
   - [x] Same items as preccalc; labels clarified where preccalc's are ambiguous; CODATA 2022 and exact definitions; names that carry their definition when the plain word is ambiguous
@@ -54,9 +58,9 @@ First version.
 - [ ] Setting for a configurable interpreter that runs the prompt
 - [ ] Reset the startup file to the bundled default
 - [ ] Accept Notepad++ theme files; bundle Notepad++ themes (check the license of each theme first)
-- [ ] `input()` opens a popup window with a text field
+- [ ] `input()` opens a popup window with a text field (the worker protocol already has a closed standard input to extend)
 - [ ] Package as an EXE (the interpreter that runs the prompt must be bundled or configured)
 - [ ] Third box above the prompt box for definitions that persist between runs
 - [ ] File menu and persistence of the prompt text
 - [ ] History (not decided; leaning towards no persisted Python session between runs)
-- [ ] macOS and Linux support (including opening the startup file in the system's `.txt` editor)
+- [ ] macOS and Linux support, including opening the startup file in the system's `.txt` editor; the POSIX branches of cancelling a run have been written but never run
