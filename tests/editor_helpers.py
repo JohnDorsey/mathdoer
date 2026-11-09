@@ -42,3 +42,10 @@ def line_formats(editor, line):
         (item.start, item.length, item.format.foreground().color().name())
         for item in block.layout().formats()
     ]
+
+
+def foreground_at(display, index):
+    """The color of the character at the index of a text box."""
+    cursor = QTextCursor(display.document())
+    cursor.setPosition(index + 1)
+    return cursor.charFormat().foreground().color().name()

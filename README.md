@@ -32,15 +32,31 @@ uv run pytest
 | Ctrl+`+`, Ctrl+`=`, Ctrl+`-`, Ctrl+`0`, Ctrl+mouse wheel | Zoom in, zoom out, reset |
 | Alt+Z | Turn word wrap on or off in the box that has the focus |
 
+Every one of these can be turned off in the settings window (see below).
+
 In the Constants and Units menus, a click inserts the name of the constant or unit and Shift+click inserts its value.
 
 ## The startup file
 
 Before every prompt, mathdoer runs your startup file in the same namespace. On Windows it is `%APPDATA%\mathdoer\startup_python.py`; Edit > Edit startup file opens it in your editor for text files. It starts out with `from math import *` and code that defines every constant and unit from the registry, such as `SPEED_OF_LIGHT` and `INCH`. mathdoer never overwrites your changes.
 
-## Settings
+## The settings window
 
-Edit > Edit settings opens the settings file, `%APPDATA%\mathdoer\settings_python.toml` on Windows, in your editor for text files, creating it first if it is missing. mathdoer reads it before every run, so a change takes effect on the next run. A mistake in it is reported in the output box and the prompt is not run.
+Edit > Settings… opens a window with the pages listed down the left and the settings of the chosen page on the right. A change takes effect at once and is saved; there is nothing to confirm. The buttons are Use current size, which copies the size of the open window into the window size setting, Restore defaults, and Close.
+
+- **Window:** the width and height the window has when mathdoer starts. A window larger than the screen is made to fit it.
+- **Display:** line numbers, colors for keywords, strings, comments and numbers, the highlight of the matching bracket, indentation guides, wrapping of long lines in each box (Alt+Z changes this one too), and zooming with the keys and with the mouse wheel.
+- **Editing:** whether Tab inserts spaces or a tab character, whether Tab indents every selected line, Shift+Tab, whether Enter keeps the indentation and adds a level after a line that opens a block, and the Home key going to the first character before the start of the line.
+- **Line commands:** comment, duplicate, move and delete lines.
+- **Find:** the find and replace bar.
+
+Every feature starts out on. Turn them all off and the prompt box is a plain text editor, like Notepad. A feature that is off is not handled by mathdoer at all, so its keys do whatever Qt does with them; only Shift+Tab is swallowed, so that the focus does not leave the box.
+
+The settings are kept in `%APPDATA%\mathdoer\interface_settings.toml` on Windows. The window writes the whole file whenever a setting changes, so comments you add to it are lost, and mathdoer reads it only when it starts. A file that cannot be read does not stop mathdoer: it starts with the default settings and says why in the output box, and the first change in the settings window, or Restore defaults, replaces the file.
+
+## The Python settings file
+
+Edit > Edit Python settings file opens the settings file, `%APPDATA%\mathdoer\settings_python.toml` on Windows, in your editor for text files, creating it first if it is missing. mathdoer reads it before every run, so a change takes effect on the next run. A mistake in it is reported in the output box and the prompt is not run.
 
 The one setting is `interpreter`, the Python that runs your prompts (3.11 or later). Without it prompts run on the Python that mathdoer itself runs on, which has no extra packages. Point it at a Python that has the packages you want:
 

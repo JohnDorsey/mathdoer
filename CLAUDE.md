@@ -18,6 +18,9 @@ Reference install of PrecCalc64: `E:\data-game-win10pro2\lock\portable\preccalc6
 - Files that could be duplicated or confused across languages carry the language name, for example `startup_python.py`.
 - User settings live in one TOML file per language (`settings_python.toml`), read before every run. A mistake in it is an error shown in the output box, never silently ignored (unknown settings are errors too).
 - A run never inherits the virtual environment mathdoer itself runs in (`uv run` activates one): launchers such as `py.exe` and the Windows `python3.exe` alias pick the active environment's Python over the one they were asked for, even when given by full path.
+- Which editor features are on, and the window size, are the fields of `InterfaceSettings`. Each field also holds its page, label and limits, and the settings window, the file and their checks are made from the fields, so a new switch is one field. Every feature is on by default. A feature that is off is simply not handled by mathdoer, so its key does what Qt does (a plain text editor), except Shift+Tab, which is swallowed so that focus never leaves the box.
+- The settings window applies and saves each change at once, as Notepad++ does; there is no OK or Apply. The window owns `interface_settings.toml` and rewrites it whole (comments in it are lost); it is read only at launch. A file that cannot be read gives the default settings and a red message, and the first change, or Restore defaults, replaces it. Alt+Z saves its choice as the wrapping setting, so the window never disagrees with the boxes.
+- The interpreter is not in the settings window. It stays in `settings_python.toml`, edited by hand.
 - Every run is a clean slate in a separate process. No persisted Python session between runs.
 - The first version has no file menu and does not persist the prompt text.
 - Dark theme with high contrast; text is never dim.
@@ -31,3 +34,4 @@ Reference install of PrecCalc64: `E:\data-game-win10pro2\lock\portable\preccalc6
 - `uv run pytest` runs the tests.
 - `uv run mathdoer` starts the program.
 - Interface tests run on Qt's offscreen platform, which has no fonts and shows nothing. Check how the window really looks with a screenshot taken on the real platform.
+- Tests never touch the user's own configuration folder: `make_window` keeps the interface settings in a temporary folder.

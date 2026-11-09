@@ -50,8 +50,16 @@ First version.
 
 Interpreter setting.
 
-- [x] Settings file per language (`settings_python.toml`, TOML, created from a bundled default by Edit > Edit settings, read before every run); unknown settings and bad values are errors that are explained in the output box
+- [x] Settings file per language (`settings_python.toml`, TOML, created from a bundled default by Edit > Edit Python settings file, read before every run); unknown settings and bad values are errors that are explained in the output box
   - [x] `interpreter`: the program that runs the prompt, as a full path or a name on the PATH
+
+Settings window.
+
+- [x] Edit > Settings… opens a window with vertical tabs on the left, as in the preferences of Notepad++; a change applies and is saved at once, and the buttons are Use current size, Restore defaults and Close
+  - [x] Every editor feature can be turned off, down to a plain text editor: line numbers, syntax colors, bracket highlight, indentation guides, wrapping in each box, zoom with the keys and the wheel, Tab inserting spaces or a tab character, Tab on selected lines, Shift+Tab, Enter keeping the indentation, a level after a block opening, Home, the four line commands, and the find bar
+  - [x] Default window size (applies at the next start; a size larger than the screen is fitted to it)
+  - [x] `interface_settings.toml`, written by the window and read at launch; a file that cannot be read gives the defaults and a red message
+  - [x] Edit settings renamed Edit Python settings file; Alt+Z keeps its choice as the wrapping setting
 
 ## Unscheduled
 
@@ -60,7 +68,8 @@ Interpreter setting.
   - [ ] Evaluate the irrational registry entries (Stefan-Boltzmann constant, parsec) from their formulas at any requested precision; the stored 100 digits are a floor, not the limit
   - [ ] Decide what Shift+click inserts for very long values (the two irrational entries have 100 digits)
 - [ ] Make the separators between menu groups easier to see in the dark theme (they are almost invisible; Fusion draws them faintly)
-- [ ] Find options: whole word and regular expressions (only Match case today)
+- [ ] Find options: whole word and regular expressions (only Match case today; they would go on the Find page of the settings window)
+- [ ] More settings, each needing approval first: tab width (fixed by the language at 4), font and font size, and the interpreter (it stays in the Python settings file for now)
 - [ ] Auto-indent after an opening bracket (today only a colon adds a level)
 - [ ] Make Enter quicker on very large prompts (it lexes every earlier line; 45 ms at 4,300 lines)
 - [ ] Languages other than Python (the interface always stays Python)
@@ -71,4 +80,4 @@ Interpreter setting.
 - [ ] Third box above the prompt box for definitions that persist between runs
 - [ ] File menu and persistence of the prompt text
 - [ ] History (not decided; leaning towards no persisted Python session between runs)
-- [ ] macOS and Linux support, including opening the startup file in the system's `.txt` editor; the POSIX branches of cancelling a run have been written but never run
+- [ ] macOS and Linux support, including opening the startup file in the system's `.txt` editor; the POSIX branches of cancelling a run have been written but never run, and with the find bar turned off Ctrl+H is left to Qt, which may delete a character on Linux and macOS (checked on Windows only)

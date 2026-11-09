@@ -29,7 +29,6 @@ from mathdoer.running import OutputText, Run, RunFinished, RunOutcome, RunSettin
 from mathdoer.user_files import create_file_if_missing
 
 WINDOW_TITLE = "mathdoer"
-INITIAL_WINDOW_SIZE = (900, 700)
 INITIAL_SPLITTER_SIZES = (280, 420)
 SPLITTER_HANDLE_WIDTH = 5
 POLL_INTERVAL_MILLISECONDS = 30
@@ -52,6 +51,24 @@ def crashed_marker(exit_code: int) -> str:
     return f"[the worker stopped unexpectedly (exit code {exit_code})]"
 
 
+def available_screen_size() -> tuple[int, int] | None:
+    """The width and height of the primary screen without the taskbar and the like, or None
+    when there is no screen to ask."""
+    screen = QGuiApplication.primaryScreen()
+    if screen is None:
+        return None
+    size = screen.availableGeometry().size()
+    return size.width(), size.height()
+
+
+def fitted_window_size(width: int, height: int, available_size: tuple[int, int] | None) -> tuple[int, int]:
+    """The size, made smaller in whichever dimension is larger than the screen has room for,
+    so that a window set to a size that does not fit can still be reached."""
+    if available_size is None:
+        return width, height
+    return min(width, available_size[0]), min(height, available_size[1])
+
+
 class MainWindow(QMainWindow):
     interface_settings_changed = Signal(object)  # the new InterfaceSettings
 
@@ -66,10 +83,12 @@ class MainWindow(QMainWindow):
         open_in_text_editor: Callable[[Path], None] = text_editor.open_in_text_editor,
         interface_settings: InterfaceSettings = DEFAULT_INTERFACE_SETTINGS,
         interface_settings_path: Path | None = None,
+        screen_size: Callable[[], tuple[int, int] | None] = available_screen_size,
         parent=None,
     ):
         """Changes to the interface settings are saved in the file at interface_settings_path,
-        or not saved at all when it is None."""
+        or not saved at all when it is None. The window opens at the size in the settings,
+        fitted to the screen that screen_size reports."""
         super().__init__(parent)
         self._interface_settings = interface_settings
         self._interface_settings_path = interface_settings_path
@@ -86,7 +105,9 @@ class MainWindow(QMainWindow):
         self._font_size = DEFAULT_POINT_SIZE
 
         self.setWindowTitle(WINDOW_TITLE)
-        self.resize(*INITIAL_WINDOW_SIZE)
+        self.resize(
+            *fitted_window_size(interface_settings.window_width, interface_settings.window_height, screen_size())
+        )
         self.setPalette(window_palette(theme))
 
         self.prompt_box = PromptEditor(theme, run_settings.language)
@@ -270,6 +291,11 @@ class MainWindow(QMainWindow):
             self._open_in_text_editor(create_file_if_missing(default_path, path))
         except OSError as error:
             self._show_status(f"[could not open the {description}: {error}]")
+
+    def report_problem(self, message: str) -> None:
+        """Show a problem in the output box, in the color of errors. The next run clears it."""
+        self.output_box.apply_changes([(message + "\n", True)])
+        self._shown_progress_text = None
 
     def _show_status(self, message: str) -> None:
         self.output_box.append_marker(message)

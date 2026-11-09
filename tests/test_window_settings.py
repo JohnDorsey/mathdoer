@@ -2,11 +2,13 @@
 from dataclasses import replace
 
 import pytest
+from editor_helpers import foreground_at
 from PySide6.QtCore import QPoint, QPointF, QRect, QSize, Qt
-from PySide6.QtGui import QWheelEvent
+from PySide6.QtGui import QGuiApplication, QWheelEvent
 from settings_helpers import every_feature_off
 
 from mathdoer.interface.fonts import DEFAULT_POINT_SIZE
+from mathdoer.interface.main_window import MainWindow, available_screen_size, fitted_window_size
 from mathdoer.interface.theme import DARK_THEME
 from mathdoer.interface_settings import DEFAULT_INTERFACE_SETTINGS, read_interface_settings
 
@@ -275,3 +277,108 @@ def test_closing_the_main_window_closes_the_settings_window(window):
     window.open_settings_window()
     window.close()
     assert window.settings_window.isHidden()
+
+
+# ------------------------------------------------------------------- the size at the start
+
+@pytest.fixture
+def open_window(qtbot, make_python_run_settings, fake_clock):
+    """A window just made, not shown and not resized, to see the size it opens at."""
+
+    def make(**options):
+        window = MainWindow(make_python_run_settings(), clock=fake_clock, **options)
+        qtbot.addWidget(window)
+        return window
+
+    return make
+
+
+def test_a_new_window_opens_at_the_size_in_the_settings(open_window):
+    window = open_window(
+        interface_settings=settings_with(window_width=1111, window_height=777), screen_size=lambda: (2560, 1400)
+    )
+    assert (window.width(), window.height()) == (1111, 777)
+
+
+def test_a_new_window_opens_at_900_by_700_by_default(open_window):
+    window = open_window(screen_size=lambda: (2560, 1400))
+    assert (window.width(), window.height()) == (900, 700)
+
+
+def test_a_window_larger_than_the_screen_is_fitted_to_it(open_window):
+    window = open_window(
+        interface_settings=settings_with(window_width=1111, window_height=777), screen_size=lambda: (800, 600)
+    )
+    assert (window.width(), window.height()) == (800, 600)
+
+
+def test_a_window_opens_at_the_size_in_the_settings_when_the_screen_is_unknown(open_window):
+    window = open_window(
+        interface_settings=settings_with(window_width=1111, window_height=777), screen_size=lambda: None
+    )
+    assert (window.width(), window.height()) == (1111, 777)
+
+
+@pytest.mark.parametrize(
+    "size, available, expected",
+    [
+        ((900, 700), (1920, 1040), (900, 700)),
+        ((1920, 1040), (1920, 1040), (1920, 1040)),
+        ((2000, 500), (1920, 1040), (1920, 500)),
+        ((500, 2000), (1920, 1040), (500, 1040)),
+        ((10000, 10000), (1366, 728), (1366, 728)),
+        ((900, 700), None, (900, 700)),
+    ],
+)
+def test_the_size_is_fitted_to_the_screen_one_dimension_at_a_time(size, available, expected):
+    assert fitted_window_size(*size, available) == expected
+
+
+class FakeScreen:
+    """Stands in for the primary screen. The offscreen platform's own is square, which would
+    hide a width taken for a height."""
+
+    def __init__(self, width, height):
+        self._geometry = QRect(0, 0, width, height)
+
+    def availableGeometry(self):
+        return self._geometry
+
+
+def stand_in_for_the_primary_screen(monkeypatch, screen):
+    monkeypatch.setattr(QGuiApplication, "primaryScreen", staticmethod(lambda: screen))
+
+
+def test_the_available_screen_size_is_that_of_the_primary_screen_without_the_taskbar(monkeypatch):
+    stand_in_for_the_primary_screen(monkeypatch, FakeScreen(1920, 1040))
+    assert available_screen_size() == (1920, 1040)
+
+
+def test_there_is_no_available_screen_size_without_a_screen(monkeypatch):
+    stand_in_for_the_primary_screen(monkeypatch, None)
+    assert available_screen_size() is None
+
+
+def test_a_window_made_without_a_screen_size_fits_itself_to_the_primary_screen(monkeypatch, open_window):
+    stand_in_for_the_primary_screen(monkeypatch, FakeScreen(1000, 500))
+    window = open_window(interface_settings=settings_with(window_width=1111, window_height=777))
+    assert (window.width(), window.height()) == (1000, 500)
+
+
+def test_changing_the_size_in_the_settings_does_not_resize_the_open_window(window):
+    width, height = window.width(), window.height()
+    window.change_interface_settings(settings_with(window_width=500, window_height=400))
+    assert (window.width(), window.height()) == (width, height)
+
+
+# ------------------------------------------------------------------------ a problem
+
+def test_a_problem_is_shown_in_the_color_of_errors_and_the_next_run_clears_it(qtbot, window):
+    window.report_problem("Something is wrong.")
+    assert window.output_box.output_text() == "Something is wrong.\n"
+    assert foreground_at(window.output_box, 0) == DARK_THEME.error_text
+
+    window.prompt_box.setPlainText("6 * 7")
+    window.run_prompt()
+    qtbot.waitUntil(lambda: not window.is_running, timeout=20000)
+    assert window.output_box.output_text().strip() == "42"
