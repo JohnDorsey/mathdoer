@@ -28,4 +28,4 @@ jobs:
 
       - run: uv sync --locked
 
-      - run: uv run pytest -x -v -s
+      - run: uv run pytest
