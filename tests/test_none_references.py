@@ -10,7 +10,7 @@ import sys
 
 import pytest
 
-from mathdoer.interface.none_references import balanced_none_references
+from mathdoer.interface.none_references import take_back_none_references
 from mathdoer.interface.prompt_editor import PromptEditor
 from mathdoer.interface.syntax_highlighter import SyntaxHighlighter
 from mathdoer.interface.theme import DARK_THEME
@@ -37,46 +37,35 @@ def release_none(times):
 # ---------------------------------------------------------------------- the workaround itself
 
 @needs_counted_none
-def test_references_released_inside_the_block_are_taken_back():
+def test_references_are_taken_back_as_counted():
     before = sys.getrefcount(None)
-    with balanced_none_references():
-        release_none(RELEASED)
-    assert sys.getrefcount(None) >= before - SMALL_TOLERANCE
+    take_back_none_references(RELEASED)
+    assert sys.getrefcount(None) >= before + RELEASED - SMALL_TOLERANCE
 
 
 @needs_counted_none
-def test_a_block_that_releases_nothing_changes_nothing():
+def test_references_released_by_the_buggy_calls_are_restored_the_way_the_highlighter_does_it():
+    def calls_that_lose_references():
+        before = sys.getrefcount(None)
+        release_none(RELEASED)
+        take_back_none_references(before - sys.getrefcount(None))
+
+    start = sys.getrefcount(None)
+    calls_that_lose_references()
+    assert abs(sys.getrefcount(None) - start) <= SMALL_TOLERANCE
+
+
+@needs_counted_none
+@pytest.mark.parametrize("count", [0, -1, -RELEASED])
+def test_a_count_of_zero_or_less_takes_back_nothing(count):
     before = sys.getrefcount(None)
-    with balanced_none_references():
-        pass
+    take_back_none_references(count)
     assert abs(sys.getrefcount(None) - before) <= SMALL_TOLERANCE
 
 
-@needs_counted_none
-def test_references_taken_inside_the_block_are_left_alone():
-    """More references to None is harmless; fewer is what kills the interpreter."""
-    before = sys.getrefcount(None)
-    keep = [None] * 7
-    with balanced_none_references():
-        keep.extend([None] * RELEASED)
-    assert sys.getrefcount(None) >= before + 7 + RELEASED - SMALL_TOLERANCE
-    del keep
-
-
-@needs_counted_none
-def test_references_are_taken_back_when_the_block_raises():
-    before = sys.getrefcount(None)
-    with pytest.raises(ValueError):
-        with balanced_none_references():
-            release_none(RELEASED)
-            raise ValueError("inside")
-    assert sys.getrefcount(None) >= before - SMALL_TOLERANCE
-
-
-def test_the_block_does_nothing_where_none_is_immortal(monkeypatch):
+def test_nothing_is_taken_back_where_none_is_immortal(monkeypatch):
     monkeypatch.setattr(sys, "version_info", (3, 12, 0, "final", 0))
-    with balanced_none_references():
-        pass  # no reading of the count, no change
+    take_back_none_references(10 ** 6)  # would be a long wait if it did something
 
 
 # --------------------------------------------------------------------- the interface code

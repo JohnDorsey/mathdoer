@@ -12,24 +12,17 @@ tests in test_none_references.py measure it).
 """
 import ctypes
 import sys
-from collections.abc import Iterator
-from contextlib import contextmanager
 
 
 def _none_is_counted() -> bool:
     return sys.version_info < (3, 12)
 
 
-@contextmanager
-def balanced_none_references() -> Iterator[None]:
-    """Take back the references to None that the code inside the block lost. Taking too many
-    is harmless, so a reference the block gained is kept."""
-    if not _none_is_counted():
-        yield
-        return
-    before = sys.getrefcount(None)
-    try:
-        yield
-    finally:
-        for _ in range(before - sys.getrefcount(None)):
+def take_back_none_references(count: int) -> None:
+    """Take back references to None that Qt calls lost. The count is how many fewer the code
+    sees now than before the calls, read as sys.getrefcount(None) in the same function (a
+    context manager cannot do it: its own machinery moves the count by a few). Taking too many
+    back is harmless, so a count of zero or less does nothing."""
+    if _none_is_counted():
+        for _ in range(count):
             ctypes.pythonapi.Py_IncRef(ctypes.py_object(None))

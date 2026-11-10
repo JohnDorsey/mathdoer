@@ -1,7 +1,9 @@
 """Coloring code as it is typed, using the language's lexer and the theme's colors."""
+import sys
+
 from PySide6.QtGui import QColor, QSyntaxHighlighter, QTextCharFormat, QTextDocument
 
-from mathdoer.interface.none_references import balanced_none_references
+from mathdoer.interface.none_references import take_back_none_references
 from mathdoer.interface.theme import Theme
 from mathdoer.languages import Language
 from mathdoer.utf16 import utf16_length
@@ -34,7 +36,8 @@ class SyntaxHighlighter(QSyntaxHighlighter):
             self.rehighlight()
 
     def highlightBlock(self, text: str) -> None:
-        with balanced_none_references():  # the calls into Qt below lose references to None on Linux
+        none_references_before = sys.getrefcount(None)
+        try:
             state_before = max(self.previousBlockState(), 0)  # -1 for the first line
             lexed = self._lex_line(text, state_before)
             if self._coloring:
@@ -45,3 +48,6 @@ class SyntaxHighlighter(QSyntaxHighlighter):
                         start, end = utf16_length(text[:start]), utf16_length(text[:end])
                     self.setFormat(start, end - start, self._formats[token.kind])
             self.setCurrentBlockState(lexed.end_state)
+        finally:
+            # The calls into Qt above lose references to None on Linux; see none_references.
+            take_back_none_references(none_references_before - sys.getrefcount(None))
