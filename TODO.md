@@ -68,7 +68,9 @@ Continuous integration and packaging.
 - [x] GitHub Actions run the tests on Linux, macOS and Windows, all on Python 3.12
   - [x] mathdoer needs Python 3.12 because PySide6 6.12.0 on Linux loses a reference to None on every call to some protected Qt methods (`QSyntaxHighlighter.setFormat`, a resize, a key press), and before Python 3.12 that count is real, so the interpreter aborts after a few thousand calls. Measured on CI; macOS and Windows are clean
 - [x] A first packaged program: `uv run pyinstaller packaging/mathdoer.spec` builds `dist/mathdoer/mathdoer.exe`, `uv run python packaging/check_build.py` checks it (files present, starts with its own empty configuration folder, keeps running), and CI does both on Windows
-- [ ] Run prompts from the packaged program: it has no Python of its own (its executable is mathdoer), so until one is bundled the settings file must name an `interpreter`, and a run without one says so
+- [x] The packaged program carries python.org's embeddable Python 3.13 (Windows) and runs prompts on it by default; `check_build.py` runs a prompt on it with the packaged worker, startup file and registry
+  - [ ] Other systems have no embeddable Python: a macOS or Linux package would need its own plan (python-build-standalone is the likely source)
+  - [ ] The checksum was computed from the download over HTTPS; python.org's PGP signature was not checked (the key could not be fetched in a usable form)
 
 ## Unscheduled
 
@@ -86,8 +88,7 @@ Continuous integration and packaging.
 - [ ] Reset the startup file to the bundled default
 - [ ] Accept Notepad++ theme files; bundle Notepad++ themes (check the license of each theme first)
 - [ ] `input()` opens a popup window with a text field (the worker protocol already has a closed standard input to extend)
-- [ ] Bundle a Python for the packaged program to run prompts with (on Windows the embeddable distribution from python.org, about 10 MB, standard library only, as the unpackaged program has); needs a decision
-- [ ] Finish the package: an icon and version information, a smaller size (98 MB; `opengl32sw.dll`, Qt6Network and Qt6Svg are probably unneeded), one file or an installer or a zip, a macOS app bundle and a Linux build (PyInstaller sets `LD_LIBRARY_PATH` for child processes on Linux, which the worker must not inherit: restore `LD_LIBRARY_PATH_ORIG`), code signing
+- [ ] Finish the package: an icon and version information, a smaller size (127 MB; `opengl32sw.dll`, Qt6Network and Qt6Svg are probably unneeded), one file or an installer or a zip, a macOS app bundle and a Linux build (PyInstaller sets `LD_LIBRARY_PATH` for child processes on Linux, which the worker must not inherit: restore `LD_LIBRARY_PATH_ORIG`), code signing
 - [ ] Third box above the prompt box for definitions that persist between runs
 - [ ] File menu and persistence of the prompt text
 - [ ] History (not decided; leaning towards no persisted Python session between runs)

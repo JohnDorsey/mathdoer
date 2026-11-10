@@ -70,11 +70,14 @@ Give the full path of the program, or the name of one on your PATH, such as `py`
 ## Building a package
 
 ```
+uv run python packaging/fetch_embeddable_python.py
 uv run pyinstaller packaging/mathdoer.spec
 uv run python packaging/check_build.py
 ```
 
-The first builds `dist/mathdoer/`, a folder with `mathdoer.exe` in it, the second checks it: that the files the program reads are in it, and that it starts, with a configuration folder of its own, and keeps running. A packaged program has no Python of its own to run prompts on, so for now name one in `settings_python.toml` (Edit > Edit Python settings file); without one a run says so.
+The first downloads python.org's embeddable Python (3.13, about 11 MB, once; the file is checked against a pinned checksum), the second builds `dist/mathdoer/`, a folder with `mathdoer.exe` in it, and the third checks it: that the files the program reads are in it, that a prompt runs on the Python it carries, and that it starts, with a configuration folder of its own, and keeps running.
+
+The packaged program runs prompts on that Python, which has the standard library and nothing else, as the unpackaged program does on its own Python. Name another in `settings_python.toml` (Edit > Edit Python settings file) to use packages. The embeddable Python exists for Windows only; a package built elsewhere has none, and a run without an `interpreter` setting says so.
 
 ## License
 

@@ -1,6 +1,9 @@
 # PyInstaller spec: a folder holding mathdoer.exe (mathdoer on macOS and Linux) and what it needs.
-# Build from the project folder with: uv run pyinstaller packaging/mathdoer.spec
+# Build from the project folder with:
+#     uv run python packaging/fetch_embeddable_python.py      (once; Windows)
+#     uv run pyinstaller packaging/mathdoer.spec
 # The result is dist/mathdoer/. Check it with: uv run python packaging/check_build.py
+import sys
 from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_data_files
@@ -16,6 +19,14 @@ datas += [
     (str(package / "languages" / "python" / "worker.py"), python_language_folder),
     (str(package / "languages" / "python" / "startup_python.py"), python_language_folder),
 ]
+
+# The Python that the packaged program runs prompts on, next to the other data (see
+# mathdoer.application.default_interpreter_path). Only Windows has an embeddable Python.
+if sys.platform == "win32":
+    embeddable_python = project / "build" / "embeddable_python" / "python"
+    if not (embeddable_python / "python.exe").is_file():
+        raise SystemExit("Run packaging/fetch_embeddable_python.py first: there is no " + str(embeddable_python))
+    datas += [(str(embeddable_python), "python")]
 
 analysis = Analysis(
     [str(package / "__main__.py")],

@@ -28,7 +28,7 @@ Reference install of PrecCalc64: `E:\data-game-win10pro2\lock\portable\preccalc6
 - Other languages besides Python will come later, but the interface always stays Python. Keep everything outside a language's own module language-neutral, and keep Python-specific names out of neutral modules.
 - Menu items insert a name on click and the literal value on Shift+click (Alt+click closes the menu on Windows).
 - Windows first. mathdoer itself needs Python 3.12 or later (PySide6 6.12.0 on Linux loses references to None, which kills Python 3.11; details in `TODO.md`), but the Python that runs the prompts may be 3.11 or later, and the worker stays standard library only and 3.11 compatible. CI runs the tests on Windows, macOS and Linux and builds the Windows package (`packaging/`).
-- A packaged program cannot run prompts on its own executable, since that is mathdoer: it has no default interpreter, and a run without an `interpreter` setting says so.
+- A packaged program cannot run prompts on its own executable, since that is mathdoer. On Windows it carries python.org's embeddable Python (pinned by checksum in `packaging/fetch_embeddable_python.py`) and uses it as the default interpreter; elsewhere it has none, and a run without an `interpreter` setting says so.
 
 ## Commands
 

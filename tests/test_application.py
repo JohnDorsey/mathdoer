@@ -119,9 +119,40 @@ def test_running_from_source_the_default_interpreter_is_the_one_mathdoer_runs_on
     assert default_interpreter_path() == Path(sys.executable)
 
 
-def test_a_packaged_program_has_no_default_interpreter_because_its_own_executable_is_mathdoer(
-    tmp_path, monkeypatch
-):
+def package_with_a_bundled_python(tmp_path, monkeypatch, platform="win32"):
+    """Pretend to be the packaged program, whose data folder holds a python folder."""
+    python = tmp_path / "package" / "python" / "python.exe"
+    python.parent.mkdir(parents=True)
+    python.write_bytes(b"")
     monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path / "package"), raising=False)
+    monkeypatch.setattr(sys, "platform", platform)
+    return python
+
+
+def test_a_packaged_program_runs_prompts_on_the_python_it_carries(tmp_path, monkeypatch):
+    python = package_with_a_bundled_python(tmp_path, monkeypatch)
+    assert default_interpreter_path() == python
+    assert create_run_settings(tmp_path / "configuration").default_interpreter_path == python
+
+
+def test_a_packaged_program_without_a_python_of_its_own_has_no_default_interpreter(tmp_path, monkeypatch):
+    """Its own executable is mathdoer, so it cannot stand in."""
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path / "empty"), raising=False)
+    monkeypatch.setattr(sys, "platform", "win32")
+    assert default_interpreter_path() is None
+    monkeypatch.delattr(sys, "_MEIPASS")
     assert default_interpreter_path() is None
     assert create_run_settings(tmp_path / "configuration").default_interpreter_path is None
+
+
+def test_a_python_folder_is_only_looked_for_where_one_is_bundled(tmp_path, monkeypatch):
+    package_with_a_bundled_python(tmp_path, monkeypatch, platform="linux")
+    assert default_interpreter_path() is None
+
+
+def test_a_python_folder_beside_a_program_that_runs_from_source_is_ignored(tmp_path, monkeypatch):
+    package_with_a_bundled_python(tmp_path, monkeypatch)
+    monkeypatch.delattr(sys, "frozen")
+    assert default_interpreter_path() == Path(sys.executable)

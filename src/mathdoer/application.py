@@ -22,13 +22,21 @@ UNREADABLE_SETTINGS_NOTICE = (
 )
 
 
+BUNDLED_INTERPRETER_PATH = Path("python") / "python.exe"  # in the data folder of a packaged program
+
+
 def default_interpreter_path() -> Path | None:
     """The Python that runs prompts when the settings file names none: the one mathdoer runs
-    on, which has no extra packages. A packaged program has none, because its own executable
-    is mathdoer, and starting that to run a prompt would open another window."""
-    if getattr(sys, "frozen", False):
+    on, which has no extra packages. A packaged program cannot use its own executable, because
+    that is mathdoer and starting it would open another window; it uses the Python that was
+    packaged with it (on Windows), or has none."""
+    if not getattr(sys, "frozen", False):
+        return Path(sys.executable)
+    data_folder = getattr(sys, "_MEIPASS", None)
+    if data_folder is None or sys.platform != "win32":
         return None
-    return Path(sys.executable)
+    bundled = Path(data_folder) / BUNDLED_INTERPRETER_PATH
+    return bundled if bundled.is_file() else None
 
 
 def create_run_settings(configuration_directory: Path | None = None) -> RunSettings:
