@@ -95,7 +95,8 @@ Continuous integration and packaging.
 - [ ] Accept Notepad++ theme files; bundle Notepad++ themes (check the license of each theme first)
 - [ ] `input()` opens a popup window with a text field (the worker protocol already has a closed standard input to extend)
 - [ ] Finish the package: a smaller size (127 MB, 54 MB zipped; `opengl32sw.dll`, Qt6Network and Qt6Svg are probably unneeded), a macOS app bundle (needs an .icns icon) and a Linux build (PyInstaller sets `LD_LIBRARY_PATH` for child processes on Linux, which the worker must not inherit: restore `LD_LIBRARY_PATH_ORIG`), code signing
-- [ ] Publish version 1.0.0: a GitHub release with the zip (a tag `v1.0.0`; not done, since a release is public)
+- [x] Version 1.0.0 is published: https://github.com/JohnDorsey/mathdoer/releases/tag/v1.0.0, tag `v1.0.0` on the commit `adf9e81`, with the zip that the package workflow built from it (SHA-256 in the release notes)
+- [ ] Releasing is by hand for now: run the package workflow manually, download the artifact, check it with `check_build.py`, then `gh release create vX.Y.Z <zip> --target <commit>`; a workflow that does it on a tag would make it repeatable
 - [ ] An About window or some other place that shows the version (the version is in the properties of `mathdoer.exe` only; a new interface feature, so it needs approval)
 - [ ] Third box above the prompt box for definitions that persist between runs
 - [ ] File menu and persistence of the prompt text
