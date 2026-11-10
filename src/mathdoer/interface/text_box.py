@@ -3,17 +3,18 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QWheelEvent
 from PySide6.QtWidgets import QFrame, QPlainTextEdit
 
-from mathdoer.interface.fonts import monospace_font
+from mathdoer.interface.fonts import DEFAULT_POINT_SIZE, monospace_font
 from mathdoer.interface.styling import text_box_palette
 from mathdoer.interface.theme import Theme
-from mathdoer.interface_settings import InterfaceSettings
+from mathdoer.interface_settings import DEFAULT_FONT_FAMILY, InterfaceSettings
 
 WHEEL_UNITS_PER_ZOOM_STEP = 120  # one notch of a mouse wheel
 
 
 class TextBox(QPlainTextEdit):
-    """A text box in the theme's colors and the monospace font, which can be zoomed
-    (it only asks: the window keeps the boxes at the same size) and can wrap long lines."""
+    """A text box in the theme's colors and a monospace font, which can be zoomed (it only asks:
+    the window moves both boxes together) and can wrap long lines. A box has its own font
+    in the settings; a subclass says which with font_in."""
 
     zoom_requested = Signal(int)  # 1 to zoom in, -1 to zoom out
 
@@ -21,6 +22,8 @@ class TextBox(QPlainTextEdit):
         super().__init__(parent)
         self._wheel_units_not_yet_used = 0
         self._zoom_with_mouse_wheel = True
+        self._font_in_settings = (DEFAULT_FONT_FAMILY, DEFAULT_POINT_SIZE)
+        self._font_family = DEFAULT_FONT_FAMILY
         self.setFont(monospace_font())
         self.setPalette(text_box_palette(self.palette(), theme))
         self.setFrameShape(QFrame.Shape.NoFrame)
@@ -28,9 +31,26 @@ class TextBox(QPlainTextEdit):
     def apply_interface_settings(self, settings: InterfaceSettings) -> None:
         """Take on the settings that concern this box. A box that has more of its own adds to this."""
         self._zoom_with_mouse_wheel = settings.zoom_with_mouse_wheel
+        font_in_settings = self.font_in(settings)
+        if font_in_settings != self._font_in_settings:  # otherwise a zoom stays
+            self._font_in_settings = font_in_settings
+            self.set_font(*font_in_settings)
+
+    @staticmethod
+    def font_in(settings: InterfaceSettings) -> tuple[str, int]:
+        """The family and the size that the settings give this box."""
+        return DEFAULT_FONT_FAMILY, DEFAULT_POINT_SIZE
+
+    def set_font(self, family: str, point_size: int) -> None:
+        self._font_family = family
+        self.setFont(monospace_font(point_size, family))
 
     def set_font_size(self, point_size: int) -> None:
-        self.setFont(monospace_font(point_size))
+        self.set_font(self._font_family, point_size)
+
+    def reset_zoom(self) -> None:
+        """Back to the font that the settings give this box."""
+        self.set_font(*self._font_in_settings)
 
     @property
     def word_wrap(self) -> bool:

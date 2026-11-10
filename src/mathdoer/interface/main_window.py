@@ -11,7 +11,6 @@ from PySide6.QtWidgets import QMainWindow, QSplitter
 from mathdoer import text_editor
 from mathdoer.interface.edit_menu import EditMenu
 from mathdoer.interface.focus_tracker import ActiveBoxTracker
-from mathdoer.interface.fonts import DEFAULT_POINT_SIZE, clamp_point_size
 from mathdoer.interface.output_display import OutputDisplay
 from mathdoer.interface.find_bar import FindBar
 from mathdoer.interface.prompt_editor import PromptEditor
@@ -102,7 +101,6 @@ class MainWindow(QMainWindow):
         self._run: Run | None = None
         self._run_started_at = 0.0
         self._shown_progress_text: str | None = None
-        self._font_size = DEFAULT_POINT_SIZE
 
         self.setWindowTitle(WINDOW_TITLE)
         self.resize(
@@ -150,7 +148,7 @@ class MainWindow(QMainWindow):
         self._zoom_shortcuts = [
             *(QShortcut(QKeySequence(sequence), self, activated=lambda: self.zoom_by(1)) for sequence in ZOOM_IN_SHORTCUTS),
             QShortcut(QKeySequence(ZOOM_OUT_SHORTCUT), self, activated=lambda: self.zoom_by(-1)),
-            QShortcut(QKeySequence(ZOOM_RESET_SHORTCUT), self, activated=lambda: self.set_font_size(DEFAULT_POINT_SIZE)),
+            QShortcut(QKeySequence(ZOOM_RESET_SHORTCUT), self, activated=self.reset_zoom),
         ]
         self._find_shortcuts = [
             QShortcut(QKeySequence(FIND_SHORTCUT), self, activated=self.find_bar.show_find),
@@ -225,16 +223,17 @@ class MainWindow(QMainWindow):
 
     @property
     def font_size(self) -> int:
-        return self._font_size
-
-    def set_font_size(self, point_size: int) -> None:
-        """Both boxes always have the same font size."""
-        self._font_size = clamp_point_size(point_size)
-        for box in (self.prompt_box, self.output_box):
-            box.set_font_size(self._font_size)
+        """The font size of the prompt box, zoom included."""
+        return self.prompt_box.font().pointSize()
 
     def zoom_by(self, steps: int) -> None:
-        self.set_font_size(self._font_size + steps)
+        """Each box zooms from its own size, and stops at the limits on its own."""
+        for box in (self.prompt_box, self.output_box):
+            box.set_font_size(box.font().pointSize() + steps)
+
+    def reset_zoom(self) -> None:
+        for box in (self.prompt_box, self.output_box):
+            box.reset_zoom()
 
     def toggle_word_wrap(self) -> None:
         """Turn word wrap on or off in the box that has the focus. The choice is kept as the

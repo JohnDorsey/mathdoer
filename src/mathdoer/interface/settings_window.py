@@ -11,6 +11,7 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
+    QFontComboBox,
     QFormLayout,
     QHBoxLayout,
     QLabel,
@@ -39,6 +40,7 @@ INITIAL_SIZE = (680, 440)
 PAGE_LIST_WIDTH = 170
 PAGE_MARGIN = 14
 ROW_SPACING = 8
+FONT_BOX_MINIMUM_WIDTH = 240
 
 
 class SettingsWindow(QDialog):
@@ -64,7 +66,8 @@ class SettingsWindow(QDialog):
         self._current_window_size = current_window_size
         self._checkboxes: dict[str, QCheckBox] = {}
         self._spin_boxes: dict[str, QSpinBox] = {}
-        self._number_labels: dict[str, QLabel] = {}
+        self._font_boxes: dict[str, QFontComboBox] = {}
+        self._row_labels: dict[str, QLabel] = {}
         self._requirements = {d.name: d.requires for d in SETTING_DESCRIPTIONS if d.requires is not None}
 
         self.setWindowTitle("Settings")
@@ -127,14 +130,16 @@ class SettingsWindow(QDialog):
             note.setWordWrap(True)
             layout.addWidget(note)
 
-        numbers = QFormLayout()
+        rows = QFormLayout()
         for description in descriptions_on_page(page):
             if description.value_type is bool:
                 layout.addWidget(self._build_checkbox(description))
+            elif description.value_type is str:
+                self._add_font_row(rows, description)
             else:
-                self._add_number_row(numbers, description)
-        if numbers.rowCount():
-            layout.addLayout(numbers)
+                self._add_number_row(rows, description)
+        if rows.rowCount():
+            layout.addLayout(rows)
         if page is WINDOW_PAGE:
             self.use_current_size_button = QPushButton("Use current size")
             self.use_current_size_button.setAutoDefault(False)
@@ -160,7 +165,22 @@ class SettingsWindow(QDialog):
         label = QLabel(description.label)
         form.addRow(label, spin_box)
         self._spin_boxes[description.name] = spin_box
-        self._number_labels[description.name] = label
+        self._row_labels[description.name] = label
+
+    def _add_font_row(self, form: QFormLayout, description: SettingDescription) -> None:
+        """A box to pick a font from or to type the name of one in. The name counts when it is
+        finished (Enter, or leaving the box), not at each letter."""
+        font_box = QFontComboBox()
+        font_box.setFontFilters(QFontComboBox.FontFilter.MonospacedFonts)  # the guides and the numbers assume it
+        font_box.setEditable(True)
+        font_box.setMinimumWidth(FONT_BOX_MINIMUM_WIDTH)
+        name = description.name
+        font_box.activated.connect(lambda _index: self._font_finished(name))
+        font_box.lineEdit().editingFinished.connect(lambda: self._font_finished(name))
+        label = QLabel(description.label)
+        form.addRow(label, font_box)
+        self._font_boxes[name] = font_box
+        self._row_labels[name] = label
 
     # -------------------------------------------------------------------------- widgets
 
@@ -170,9 +190,12 @@ class SettingsWindow(QDialog):
     def spin_box_for(self, name: str) -> QSpinBox:
         return self._spin_boxes[name]
 
+    def font_box_for(self, name: str) -> QFontComboBox:
+        return self._font_boxes[name]
+
     def label_for(self, name: str) -> str:
-        """The text beside the box of a number setting."""
-        return self._number_labels[name].text()
+        """The text beside the box of a number or font setting."""
+        return self._row_labels[name].text()
 
     # ------------------------------------------------------------------------- settings
 
@@ -187,6 +210,8 @@ class SettingsWindow(QDialog):
             self._show_value(checkbox, checkbox.setChecked, getattr(settings, name))
         for name, spin_box in self._spin_boxes.items():
             self._show_value(spin_box, spin_box.setValue, getattr(settings, name))
+        for name, font_box in self._font_boxes.items():
+            self._show_value(font_box, font_box.setCurrentText, getattr(settings, name))
         self._update_requirements()
 
     @staticmethod
@@ -208,6 +233,20 @@ class SettingsWindow(QDialog):
             return
         self._settings = settings
         self._update_requirements()
+        self.settings_changed.emit(settings)
+
+    def _font_finished(self, name: str) -> None:
+        """The font box is done. It shows the name in the settings, not what was typed, if no
+        name was typed. Only that font changes."""
+        font_box = self._font_boxes[name]
+        family = font_box.currentText().strip()
+        if not family:
+            family = getattr(self._settings, name)
+        self._show_value(font_box, font_box.setCurrentText, family)
+        settings = replace(self._settings, **{name: family})
+        if settings == self._settings:
+            return
+        self._settings = settings
         self.settings_changed.emit(settings)
 
     def _restore_defaults(self) -> None:

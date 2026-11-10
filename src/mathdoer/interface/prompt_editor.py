@@ -1,5 +1,6 @@
 """The prompt box: a text box that edits code the way a code editor does."""
 from collections.abc import Callable, Iterator, Sequence
+from dataclasses import replace
 from typing import NamedTuple
 
 from PySide6.QtCore import QEvent, QRect, QSize, Qt
@@ -100,10 +101,16 @@ class PromptEditor(TextBox):
 
     # ------------------------------------------------------------------- settings
 
+    @staticmethod
+    def font_in(settings: InterfaceSettings) -> tuple[str, int]:
+        return settings.prompt_box_font_family, settings.prompt_box_font_size
+
     def apply_interface_settings(self, settings: InterfaceSettings) -> None:
         """Turn the features of the box on or off as the settings say."""
         super().apply_interface_settings(settings)
         self._settings = settings
+        self._rules = replace(self._rules, indent_width=settings.tab_width)
+        self._font_changed()  # the tab stops
         self.set_word_wrap(settings.wrap_prompt_box_lines)
         self._highlighter.set_coloring(settings.highlight_syntax)
         self.gutter.setVisible(settings.show_line_numbers)

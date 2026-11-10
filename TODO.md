@@ -60,6 +60,7 @@ Settings window.
   - [x] Default window size (applies at the next start; a size larger than the screen is fitted to it)
   - [x] `interface_settings.toml`, written by the window and read at launch; a file that cannot be read gives the defaults and a red message
   - [x] Edit settings renamed Edit Python settings file; Alt+Z keeps its choice as the wrapping setting
+  - [x] Tab width (Editing page) and a Fonts page: family and size for the prompt box and the output box separately; zooming moves each box from its own size and Ctrl+0 returns to the sizes in the settings
 
 ## Unscheduled
 
@@ -69,7 +70,8 @@ Settings window.
   - [ ] Decide what Shift+click inserts for very long values (the two irrational entries have 100 digits)
 - [ ] Make the separators between menu groups easier to see in the dark theme (they are almost invisible; Fusion draws them faintly)
 - [ ] Find options: whole word and regular expressions (only Match case today; they would go on the Find page of the settings window)
-- [ ] More settings, each needing approval first: tab width (fixed by the language at 4), font and font size, and the interpreter (it stays in the Python settings file for now)
+- [ ] More settings, each needing approval first: the interpreter (it stays in the Python settings file for now)
+- [ ] The tab width is one setting for every language (default 4); when a second language comes, decide whether each language keeps its own
 - [ ] Auto-indent after an opening bracket (today only a colon adds a level)
 - [ ] Make Enter quicker on very large prompts (it lexes every earlier line; 45 ms at 4,300 lines)
 - [ ] Languages other than Python (the interface always stays Python)

@@ -6,6 +6,7 @@ from dataclasses import fields, replace
 import pytest
 from settings_helpers import random_settings
 
+from mathdoer.interface.fonts import DEFAULT_POINT_SIZE, MONOSPACE_FAMILIES
 from mathdoer.interface_settings import (
     DEFAULT_INTERFACE_SETTINGS,
     SETTING_DESCRIPTIONS,
@@ -33,6 +34,11 @@ EXPECTED_NAMES = [
     "wrap_output_box_lines",
     "zoom_with_keys",
     "zoom_with_mouse_wheel",
+    "prompt_box_font_family",
+    "prompt_box_font_size",
+    "output_box_font_family",
+    "output_box_font_size",
+    "tab_width",
     "tab_key_inserts_spaces",
     "tab_indents_selected_lines",
     "shift_tab_removes_indentation",
@@ -47,6 +53,7 @@ EXPECTED_NAMES = [
 ]
 YES_OR_NO_DESCRIPTIONS = [description for description in SETTING_DESCRIPTIONS if description.value_type is bool]
 NUMBER_DESCRIPTIONS = [description for description in SETTING_DESCRIPTIONS if description.value_type is int]
+TEXT_DESCRIPTIONS = [description for description in SETTING_DESCRIPTIONS if description.value_type is str]
 
 
 @pytest.fixture
@@ -80,12 +87,40 @@ def test_the_window_starts_at_900_by_700_by_default():
     assert (DEFAULT_INTERFACE_SETTINGS.window_width, DEFAULT_INTERFACE_SETTINGS.window_height) == (900, 700)
 
 
-def test_the_window_size_is_the_only_pair_of_numbers():
-    assert [description.name for description in NUMBER_DESCRIPTIONS] == ["window_width", "window_height"]
+def test_the_numbers_are_the_window_size_the_font_sizes_and_the_tab_width():
+    assert [description.name for description in NUMBER_DESCRIPTIONS] == [
+        "window_width", "window_height", "prompt_box_font_size", "output_box_font_size", "tab_width",
+    ]
+
+
+def test_the_texts_are_the_font_of_each_box():
+    assert [description.name for description in TEXT_DESCRIPTIONS] == [
+        "prompt_box_font_family", "output_box_font_family",
+    ]
+
+
+def test_the_defaults_of_the_new_settings_are_what_the_boxes_always_had():
+    """The font was Consolas (then the fallbacks), 11 points; a tab stop was four spaces."""
+    assert DEFAULT_INTERFACE_SETTINGS.prompt_box_font_family == MONOSPACE_FAMILIES[0] == "Consolas"
+    assert DEFAULT_INTERFACE_SETTINGS.output_box_font_family == "Consolas"
+    assert DEFAULT_INTERFACE_SETTINGS.prompt_box_font_size == DEFAULT_POINT_SIZE == 11
+    assert DEFAULT_INTERFACE_SETTINGS.output_box_font_size == 11
+    assert DEFAULT_INTERFACE_SETTINGS.tab_width == 4
 
 
 def test_the_pages_are_these_in_this_order():
-    assert [page.title for page in SETTINGS_PAGES] == ["Window", "Display", "Editing", "Line commands", "Find"]
+    assert [page.title for page in SETTINGS_PAGES] == [
+        "Window", "Display", "Fonts", "Editing", "Line commands", "Find",
+    ]
+
+
+def test_the_fonts_page_has_the_fonts_and_the_tab_width_is_on_the_editing_page():
+    fonts_page = next(page for page in SETTINGS_PAGES if page.title == "Fonts")
+    editing_page = next(page for page in SETTINGS_PAGES if page.title == "Editing")
+    assert [d.name for d in descriptions_on_page(fonts_page)] == [
+        "prompt_box_font_family", "prompt_box_font_size", "output_box_font_family", "output_box_font_size",
+    ]
+    assert descriptions_on_page(editing_page)[0].name == "tab_width"
 
 
 def test_every_page_has_settings_and_every_setting_is_on_exactly_one_page():
@@ -127,21 +162,34 @@ def test_the_only_requirement_is_that_a_new_line_must_keep_the_indentation_to_ad
     assert requirements == {"indent_after_block_opening": "enter_keeps_indentation"}
 
 
-def test_numbers_have_limits_around_their_default_and_yes_or_no_settings_have_none():
+def test_numbers_have_limits_around_their_default_and_the_other_settings_have_none():
     for description in NUMBER_DESCRIPTIONS:
         assert description.minimum <= description.default <= description.maximum
-    for description in YES_OR_NO_DESCRIPTIONS:
+    for description in YES_OR_NO_DESCRIPTIONS + TEXT_DESCRIPTIONS:
         assert description.minimum is None and description.maximum is None
 
 
-def test_the_limits_of_the_window_size():
+def test_the_limits_of_the_numbers():
     limits = {d.name: (d.minimum, d.maximum) for d in NUMBER_DESCRIPTIONS}
-    assert limits == {"window_width": (400, 10000), "window_height": (300, 10000)}
+    assert limits == {
+        "window_width": (400, 10000),
+        "window_height": (300, 10000),
+        "prompt_box_font_size": (6, 72),
+        "output_box_font_size": (6, 72),
+        "tab_width": (1, 16),
+    }
 
 
 def test_the_limits_themselves_are_allowed():
     InterfaceSettings(window_width=400, window_height=300)
     InterfaceSettings(window_width=10000, window_height=10000)
+    InterfaceSettings(prompt_box_font_size=6, output_box_font_size=72, tab_width=1)
+    InterfaceSettings(prompt_box_font_size=72, output_box_font_size=6, tab_width=16)
+
+
+def test_a_font_may_have_any_name_that_is_not_empty():
+    for name in ("Courier New", "x", " ", 'He said "hi"', "back\\slash", "Ünïcödé 😀", "tab\there"):
+        assert InterfaceSettings(prompt_box_font_family=name).prompt_box_font_family == name
 
 
 def test_true_and_false_are_not_numbers_even_where_zero_and_one_are_allowed():
@@ -171,6 +219,16 @@ def test_true_and_false_are_not_numbers_even_where_zero_and_one_are_allowed():
         ("show_line_numbers", 1),
         ("show_line_numbers", "true"),
         ("show_line_numbers", None),
+        ("tab_width", 0),
+        ("tab_width", 17),
+        ("tab_width", 4.0),
+        ("prompt_box_font_size", 5),
+        ("output_box_font_size", 73),
+        ("prompt_box_font_family", ""),
+        ("output_box_font_family", ""),
+        ("prompt_box_font_family", 11),
+        ("output_box_font_family", True),
+        ("output_box_font_family", None),
     ],
 )
 def test_a_value_of_the_wrong_kind_or_outside_the_limits_cannot_be_set(name, value):
@@ -192,6 +250,25 @@ def test_the_rendered_file_writes_values_as_toml_values():
     assert "highlight_syntax = true\n" in text
 
 
+def test_the_rendered_file_writes_a_font_as_a_quoted_string():
+    text = render_interface_settings(replace(DEFAULT_INTERFACE_SETTINGS, output_box_font_family="Courier New"))
+    assert 'output_box_font_family = "Courier New"\n' in text
+    assert 'prompt_box_font_family = "Consolas"\n' in text
+
+
+AWKWARD_FONT_NAMES = [
+    'He said "hi"', "back\\slash", "ends with a backslash\\", "Ünïcödé", "😀 emoji", "tab\there",
+    "line\nbreak", "bell\x07", "delete\x7f", "  spaces  ", "# not a comment", "a = b", "'single'", "\\u0041",
+]
+
+
+@pytest.mark.parametrize("name", AWKWARD_FONT_NAMES)
+def test_a_font_name_with_quotes_backslashes_or_control_characters_survives_the_file(name, settings_path):
+    settings = replace(DEFAULT_INTERFACE_SETTINGS, prompt_box_font_family=name, output_box_font_family=name)
+    settings_path.write_bytes(render_interface_settings(settings).encode("utf-8"))
+    assert read_interface_settings(settings_path) == settings
+
+
 def test_the_rendered_file_has_a_heading_for_each_page_and_says_the_settings_window_writes_it():
     text = render_interface_settings(DEFAULT_INTERFACE_SETTINGS)
     for page in SETTINGS_PAGES:
@@ -206,8 +283,14 @@ def test_what_is_rendered_is_read_back_exactly(settings_path):
     every_feature_off = replace(
         DEFAULT_INTERFACE_SETTINGS, **{description.name: False for description in YES_OR_NO_DESCRIPTIONS}
     )
-    smallest = replace(DEFAULT_INTERFACE_SETTINGS, window_width=400, window_height=300)
-    largest = replace(DEFAULT_INTERFACE_SETTINGS, window_width=10000, window_height=10000)
+    smallest = replace(
+        DEFAULT_INTERFACE_SETTINGS, window_width=400, window_height=300,
+        prompt_box_font_size=6, output_box_font_size=6, tab_width=1,
+    )
+    largest = replace(
+        DEFAULT_INTERFACE_SETTINGS, window_width=10000, window_height=10000,
+        prompt_box_font_size=72, output_box_font_size=72, tab_width=16,
+    )
     cases = [DEFAULT_INTERFACE_SETTINGS, every_feature_off, smallest, largest]
     cases += [random_settings(generator) for _ in range(60)]
     for settings in cases:
@@ -251,6 +334,14 @@ def test_a_byte_order_mark_at_the_start_of_the_file_is_skipped(settings_path):
         ("window_width = '900'\n", "whole number"),
         ("window_width = 399\n", "from 400 to 10000"),
         ("window_height = 10001\n", "from 300 to 10000"),
+        ("tab_width = 0\n", "from 1 to 16"),
+        ("tab_width = 17\n", "from 1 to 16"),
+        ("prompt_box_font_size = 5\n", "from 6 to 72"),
+        ("output_box_font_size = 73\n", "from 6 to 72"),
+        ("prompt_box_font_family = 12\n", "name of a font"),
+        ("output_box_font_family = true\n", "name of a font"),
+        ("output_box_font_family = ['Consolas']\n", "name of a font"),
+        ("prompt_box_font_family = ''\n", "name of a font"),
     ],
 )
 def test_a_value_that_does_not_fit_is_an_error_naming_the_setting_the_file_and_what_is_allowed(

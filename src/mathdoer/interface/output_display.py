@@ -44,6 +44,10 @@ class OutputDisplay(TextBox):
         text_format.setForeground(QColor(color))
         return text_format
 
+    @staticmethod
+    def font_in(settings: InterfaceSettings) -> tuple[str, int]:
+        return settings.output_box_font_family, settings.output_box_font_size
+
     def apply_interface_settings(self, settings: InterfaceSettings) -> None:
         super().apply_interface_settings(settings)
         self.set_word_wrap(settings.wrap_output_box_lines)

@@ -1,5 +1,5 @@
-"""The user's choices about the interface: which editor features are on, and the size the
-window opens at.
+"""The user's choices about the interface: which editor features are on, the size the window
+opens at, the font of each box and the width of a tab.
 
 Each setting is a field of InterfaceSettings, and the field says everything else about it too:
 the page of the settings window it is on, its label there, and its limits. The window, the
@@ -20,6 +20,13 @@ DEFAULT_WINDOW_HEIGHT = 700
 MINIMUM_WINDOW_WIDTH = 400
 MINIMUM_WINDOW_HEIGHT = 300
 MAXIMUM_WINDOW_SIZE = 10000  # pixels; a window larger than the screen is fitted to it when it opens
+DEFAULT_FONT_FAMILY = "Consolas"  # where it is not installed, the fonts that interface.fonts falls back to
+DEFAULT_POINT_SIZE = 11
+MINIMUM_POINT_SIZE = 6
+MAXIMUM_POINT_SIZE = 72
+DEFAULT_TAB_WIDTH = 4
+MINIMUM_TAB_WIDTH = 1
+MAXIMUM_TAB_WIDTH = 16  # characters
 
 FILE_HEADER = (
     "# mathdoer interface settings.\n"
@@ -47,10 +54,16 @@ WINDOW_PAGE = SettingsPage(
     "The size the window has when mathdoer starts. A change applies the next time mathdoer starts.",
 )
 DISPLAY_PAGE = SettingsPage("Display")
+FONTS_PAGE = SettingsPage(
+    "Fonts",
+    "Pick a font from the list or type the name of one. A font that is not installed is replaced by "
+    "Consolas or, failing that, another monospace font. Zooming (Ctrl and + or -) changes the size until "
+    "Ctrl+0 puts it back to the size set here.",
+)
 EDITING_PAGE = SettingsPage("Editing")
 LINE_COMMANDS_PAGE = SettingsPage("Line commands")
 FIND_PAGE = SettingsPage("Find")
-SETTINGS_PAGES = (WINDOW_PAGE, DISPLAY_PAGE, EDITING_PAGE, LINE_COMMANDS_PAGE, FIND_PAGE)
+SETTINGS_PAGES = (WINDOW_PAGE, DISPLAY_PAGE, FONTS_PAGE, EDITING_PAGE, LINE_COMMANDS_PAGE, FIND_PAGE)
 
 
 def _setting(default, page, label, *, requires=None, minimum=None, maximum=None):
@@ -85,6 +98,21 @@ class InterfaceSettings:
     zoom_with_keys: bool = _setting(True, DISPLAY_PAGE, "Zoom with Ctrl and +, - or 0")
     zoom_with_mouse_wheel: bool = _setting(True, DISPLAY_PAGE, "Zoom with Ctrl and the mouse wheel")
 
+    prompt_box_font_family: str = _setting(DEFAULT_FONT_FAMILY, FONTS_PAGE, "Prompt box font")
+    prompt_box_font_size: int = _setting(
+        DEFAULT_POINT_SIZE, FONTS_PAGE, "Prompt box font size in points",
+        minimum=MINIMUM_POINT_SIZE, maximum=MAXIMUM_POINT_SIZE,
+    )
+    output_box_font_family: str = _setting(DEFAULT_FONT_FAMILY, FONTS_PAGE, "Output box font")
+    output_box_font_size: int = _setting(
+        DEFAULT_POINT_SIZE, FONTS_PAGE, "Output box font size in points",
+        minimum=MINIMUM_POINT_SIZE, maximum=MAXIMUM_POINT_SIZE,
+    )
+
+    tab_width: int = _setting(
+        DEFAULT_TAB_WIDTH, EDITING_PAGE, "Tab width in characters (the width of one level of indentation)",
+        minimum=MINIMUM_TAB_WIDTH, maximum=MAXIMUM_TAB_WIDTH,
+    )
     tab_key_inserts_spaces: bool = _setting(
         True, EDITING_PAGE, "Tab inserts spaces (turned off, Tab inserts a tab character)"
     )
@@ -123,8 +151,8 @@ class SettingDescription:
     """What a setting is, for the settings window and the file: read from the field."""
 
     name: str
-    value_type: type  # bool for a feature that is on or off, int for a number
-    default: bool | int
+    value_type: type  # bool for a feature that is on or off, int for a number, str for a font name
+    default: bool | int | str
     page: SettingsPage
     label: str
     requires: str | None
@@ -135,6 +163,8 @@ class SettingDescription:
         """Why the value cannot be this setting's, or None if it can."""
         if self.value_type is bool:
             return None if isinstance(value, bool) else "must be true or false"
+        if self.value_type is str:
+            return None if isinstance(value, str) and value else "must be the name of a font, in quotes"
         is_a_whole_number = isinstance(value, int) and not isinstance(value, bool)
         if is_a_whole_number and self.minimum <= value <= self.maximum:
             return None
@@ -217,5 +247,21 @@ def write_interface_settings(path: Path, settings: InterfaceSettings) -> None:
         raise
 
 
-def _toml_value(value: bool | int) -> str:
+def _toml_value(value: bool | int | str) -> str:
+    if isinstance(value, str):
+        return _toml_string(value)
     return ("true" if value else "false") if isinstance(value, bool) else str(value)
+
+
+def _toml_string(text: str) -> str:
+    """A TOML basic string: quotes and backslashes escaped, control characters written as
+    unicode escapes. The rest, such as accented letters, stays as it is; the file is UTF-8."""
+    escaped = []
+    for character in text:
+        if character in ('"', "\\"):
+            escaped.append("\\" + character)
+        elif ord(character) < 0x20 or ord(character) == 0x7F:
+            escaped.append(f"\\u{ord(character):04x}")
+        else:
+            escaped.append(character)
+    return '"' + "".join(escaped) + '"'

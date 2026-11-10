@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import pytest
 from PySide6.QtCore import QPoint, Qt
-from PySide6.QtWidgets import QCheckBox, QLabel, QPushButton, QSpinBox
+from PySide6.QtWidgets import QCheckBox, QFontComboBox, QLabel, QPushButton, QSpinBox
 from settings_helpers import every_feature_off, random_settings
 
 from mathdoer.interface.settings_window import SettingsWindow
@@ -18,6 +18,7 @@ from mathdoer.interface_settings import (
 
 YES_OR_NO_DESCRIPTIONS = [d for d in SETTING_DESCRIPTIONS if d.value_type is bool]
 NUMBER_DESCRIPTIONS = [d for d in SETTING_DESCRIPTIONS if d.value_type is int]
+TEXT_DESCRIPTIONS = [d for d in SETTING_DESCRIPTIONS if d.value_type is str]
 
 
 class SizeOfTheWindow:
@@ -63,18 +64,28 @@ class Announcements:
 def widget_of(dialog, description):
     if description.value_type is bool:
         return dialog.checkbox_for(description.name)
+    if description.value_type is str:
+        return dialog.font_box_for(description.name)
     return dialog.spin_box_for(description.name)
 
 
 def value_of(widget):
-    return widget.isChecked() if isinstance(widget, QCheckBox) else widget.value()
+    if isinstance(widget, QCheckBox):
+        return widget.isChecked()
+    return widget.currentText() if isinstance(widget, QFontComboBox) else widget.value()
+
+
+def type_font(box, name):
+    """What the user does to choose a font by typing its name and finishing."""
+    box.lineEdit().setText(name)
+    box.lineEdit().editingFinished.emit()
 
 
 # ------------------------------------------------------------------------------- pages
 
 def test_the_window_is_titled_settings_and_lists_the_pages_in_order(dialog):
     assert dialog.windowTitle() == "Settings"
-    assert dialog.page_titles() == ["Window", "Display", "Editing", "Line commands", "Find"]
+    assert dialog.page_titles() == ["Window", "Display", "Fonts", "Editing", "Line commands", "Find"]
     assert dialog.page_titles() == [page.title for page in SETTINGS_PAGES]
 
 
@@ -84,14 +95,14 @@ def test_the_first_page_is_shown_first(dialog):
 
 
 def test_choosing_a_page_in_the_list_shows_it(dialog):
-    dialog.page_list.setCurrentRow(2)
+    dialog.page_list.setCurrentRow(3)
     assert dialog.current_page_title == "Editing"
     assert dialog.checkbox_for("tab_key_inserts_spaces").isVisible()
     assert not dialog.checkbox_for("show_line_numbers").isVisible()
 
 
 def test_clicking_a_page_title_shows_the_page(qtbot, dialog):
-    item = dialog.page_list.item(3)
+    item = dialog.page_list.item(4)
     qtbot.mouseClick(dialog.page_list.viewport(), Qt.MouseButton.LeftButton, pos=dialog.page_list.visualItemRect(item).center())
     assert dialog.current_page_title == "Line commands"
 
@@ -99,7 +110,7 @@ def test_clicking_a_page_title_shows_the_page(qtbot, dialog):
 def test_show_page_chooses_a_page_by_its_title(dialog):
     dialog.show_page("Find")
     assert dialog.current_page_title == "Find"
-    assert dialog.page_list.currentRow() == 4
+    assert dialog.page_list.currentRow() == 5
 
 
 def test_each_page_shows_exactly_the_settings_that_belong_to_it(dialog):
@@ -127,7 +138,8 @@ def test_every_setting_has_a_widget_that_shows_its_value_and_label(dialog):
         if description.value_type is bool:
             assert widget.text() == description.label
         else:
-            assert (widget.minimum(), widget.maximum()) == (description.minimum, description.maximum)
+            if description.value_type is int:
+                assert (widget.minimum(), widget.maximum()) == (description.minimum, description.maximum)
             assert dialog.label_for(description.name) == description.label
 
 
@@ -145,6 +157,111 @@ def test_the_widgets_are_of_the_kind_the_setting_needs(dialog):
         assert isinstance(dialog.checkbox_for(description.name), QCheckBox)
     for description in NUMBER_DESCRIPTIONS:
         assert isinstance(dialog.spin_box_for(description.name), QSpinBox)
+    for description in TEXT_DESCRIPTIONS:
+        assert isinstance(dialog.font_box_for(description.name), QFontComboBox)
+
+
+# ------------------------------------------------------------------------------- fonts
+
+def test_the_fonts_page_has_a_row_for_each_font_and_size_in_order(dialog):
+    dialog.show_page("Fonts")
+    labels = [label.text() for label in dialog.findChildren(QLabel) if label.isVisible()]
+    assert [text for text in labels if "font" in text.lower() and "." not in text] == [
+        "Prompt box font", "Prompt box font size in points", "Output box font", "Output box font size in points",
+    ]
+
+
+def test_a_font_box_shows_the_name_in_the_settings_even_when_that_font_is_not_installed(make_settings_window):
+    dialog = make_settings_window(replace(DEFAULT_INTERFACE_SETTINGS, output_box_font_family="Not A Font At All"))
+    assert dialog.font_box_for("output_box_font_family").currentText() == "Not A Font At All"
+
+
+def test_a_font_box_lists_only_monospace_fonts(dialog):
+    box = dialog.font_box_for("prompt_box_font_family")
+    assert box.fontFilters() == QFontComboBox.FontFilter.MonospacedFonts
+
+
+def test_a_font_typed_and_finished_changes_that_setting_alone_and_announces_it(dialog):
+    announced = Announcements(dialog)
+    type_font(dialog.font_box_for("output_box_font_family"), "Courier New")
+    assert announced.settings == [replace(DEFAULT_INTERFACE_SETTINGS, output_box_font_family="Courier New")]
+    type_font(dialog.font_box_for("prompt_box_font_family"), "Lucida Console")
+    assert announced.settings[-1] == replace(
+        DEFAULT_INTERFACE_SETTINGS, output_box_font_family="Courier New", prompt_box_font_family="Lucida Console"
+    )
+
+
+def test_a_font_picked_from_the_list_changes_the_setting(dialog):
+    announced = Announcements(dialog)
+    box = dialog.font_box_for("prompt_box_font_family")
+    box.setCurrentText("Courier New")  # what choosing an entry of the list does to the box
+    box.activated.emit(0)
+    assert announced.settings == [replace(DEFAULT_INTERFACE_SETTINGS, prompt_box_font_family="Courier New")]
+
+
+def test_a_font_being_typed_is_not_a_setting_until_it_is_finished(qtbot, dialog):
+    announced = Announcements(dialog)
+    box = dialog.font_box_for("prompt_box_font_family")
+    box.lineEdit().selectAll()
+    qtbot.keyClicks(box.lineEdit(), "Cour")
+    assert announced.settings == []
+
+
+def test_finishing_with_the_same_font_announces_nothing(dialog):
+    announced = Announcements(dialog)
+    type_font(dialog.font_box_for("prompt_box_font_family"), DEFAULT_INTERFACE_SETTINGS.prompt_box_font_family)
+    assert announced.settings == []
+
+
+def test_finishing_with_no_name_keeps_the_font_and_shows_it_again(dialog):
+    announced = Announcements(dialog)
+    box = dialog.font_box_for("prompt_box_font_family")
+    type_font(box, "")
+    assert announced.settings == []
+    assert box.currentText() == DEFAULT_INTERFACE_SETTINGS.prompt_box_font_family
+
+
+def test_finishing_with_only_spaces_keeps_the_font_and_shows_it_again(dialog):
+    announced = Announcements(dialog)
+    box = dialog.font_box_for("output_box_font_family")
+    type_font(box, "   ")
+    assert announced.settings == []
+    assert box.currentText() == DEFAULT_INTERFACE_SETTINGS.output_box_font_family
+
+
+def test_spaces_around_a_typed_font_are_dropped(dialog):
+    announced = Announcements(dialog)
+    type_font(dialog.font_box_for("output_box_font_family"), "  Courier New ")
+    assert announced.settings[-1].output_box_font_family == "Courier New"
+    assert dialog.font_box_for("output_box_font_family").currentText() == "Courier New"
+
+
+def test_changing_another_setting_never_changes_a_font(dialog):
+    """The font box may show a font other than the one in the settings (one not installed)."""
+    dialog.set_settings(replace(DEFAULT_INTERFACE_SETTINGS, output_box_font_family="Not A Font At All"))
+    dialog.checkbox_for("show_line_numbers").click()
+    dialog.spin_box_for("tab_width").setValue(2)
+    assert dialog.settings.output_box_font_family == "Not A Font At All"
+    assert dialog.settings.prompt_box_font_family == "Consolas"
+
+
+def test_a_font_not_yet_finished_is_not_taken_when_another_setting_changes(dialog):
+    dialog.font_box_for("prompt_box_font_family").lineEdit().setText("Cour")
+    dialog.checkbox_for("show_line_numbers").click()
+    assert dialog.settings.prompt_box_font_family == DEFAULT_INTERFACE_SETTINGS.prompt_box_font_family
+    assert dialog.settings.show_line_numbers is False
+
+
+def test_the_sizes_and_the_tab_width_are_numbers_within_their_limits(dialog):
+    for name, limits in (("prompt_box_font_size", (6, 72)), ("output_box_font_size", (6, 72)), ("tab_width", (1, 16))):
+        spin_box = dialog.spin_box_for(name)
+        assert (spin_box.minimum(), spin_box.maximum()) == limits
+
+
+def test_the_tab_width_is_on_the_editing_page(dialog):
+    dialog.show_page("Editing")
+    assert dialog.spin_box_for("tab_width").isVisible()
+    assert "Tab width" in dialog.label_for("tab_width")
 
 
 # ------------------------------------------------------------------ changing a setting
