@@ -614,3 +614,21 @@ def test_the_default_startup_leaves_only_math_and_registry_names_behind(run_with
         | {entry.name for entry in load_registry().entries()}
     )
     assert result.output_text == f"{expected!r}\n"
+
+
+def test_without_a_default_interpreter_or_a_setting_the_run_ends_before_it_starts_and_says_why(tmp_path):
+    settings = RunSettings(
+        language=PYTHON,
+        default_interpreter_path=None,
+        settings_path=tmp_path / PYTHON.settings_file_name,
+        startup_path=tmp_path / PYTHON.startup_file_name,
+        registry_path=shipped_registry_path(),
+        working_directory=tmp_path,
+    )
+    run = settings.start("print('PROMPT-WAS-RUN')")
+    assert run.wait(30)
+    events = run.poll()
+    text = "".join(event.text for event in events if isinstance(event, OutputText))
+    assert "No interpreter" in text and str(tmp_path / PYTHON.settings_file_name) in text
+    assert "PROMPT-WAS-RUN" not in text
+    assert events[-1] == RunFinished(RunOutcome.CRASHED, None)

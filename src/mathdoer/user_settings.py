@@ -27,11 +27,12 @@ class UserSettingsError(Exception):
 
 
 def resolve_interpreter(
-    settings_path: Path, default_interpreter_path: Path, search_path: str | None = None
+    settings_path: Path, default_interpreter_path: Path | None, search_path: str | None = None
 ) -> Path:
     """The interpreter the settings file names, or the default when it does not name one
     (including when there is no settings file). A name without a folder is looked up on the
-    search path given, or on the one of this process. Raises UserSettingsError."""
+    search path given, or on the one of this process. Raises UserSettingsError, also when
+    nothing names an interpreter and there is no default."""
     settings = _read_settings(settings_path)
     unknown_settings = sorted(name for name in settings if name not in KNOWN_SETTINGS)
     if unknown_settings:
@@ -39,6 +40,11 @@ def resolve_interpreter(
         known = ", ".join(KNOWN_SETTINGS)
         raise UserSettingsError(f"Unknown setting {names} in {settings_path}. The settings are: {known}.")
     if INTERPRETER_SETTING not in settings:
+        if default_interpreter_path is None:
+            raise UserSettingsError(
+                f"No interpreter is set, and mathdoer has none of its own. Set '{INTERPRETER_SETTING}' in "
+                f"{settings_path} to the Python that should run your prompts (3.11 or later)."
+            )
         return default_interpreter_path
     return _find_interpreter(settings[INTERPRETER_SETTING], settings_path, search_path)
 

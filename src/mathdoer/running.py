@@ -83,8 +83,9 @@ class RunSettings:
     """Everything about a run except the prompt."""
 
     language: Language
-    # Runs use this interpreter unless the settings file names another.
-    default_interpreter_path: Path
+    # Runs use this interpreter unless the settings file names another. None when there is none:
+    # a run then needs the settings file to name one.
+    default_interpreter_path: Path | None
     settings_path: Path
     startup_path: Path
     registry_path: Path

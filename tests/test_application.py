@@ -5,7 +5,7 @@ from pathlib import Path
 
 from editor_helpers import foreground_at
 
-from mathdoer.application import create_main_window, create_run_settings
+from mathdoer.application import create_main_window, create_run_settings, default_interpreter_path
 from mathdoer.interface.theme import DARK_THEME
 from mathdoer.interface_settings import DEFAULT_INTERFACE_SETTINGS, read_interface_settings, write_interface_settings
 from mathdoer.languages.python import PYTHON
@@ -112,3 +112,16 @@ def test_the_message_says_what_to_do_about_the_file(qtbot, tmp_path):
     text = window.output_box.output_text()
     assert "'nonsense'" in text
     assert "Settings" in text and "replaces the file" in text
+
+
+def test_running_from_source_the_default_interpreter_is_the_one_mathdoer_runs_on(monkeypatch):
+    monkeypatch.delattr(sys, "frozen", raising=False)
+    assert default_interpreter_path() == Path(sys.executable)
+
+
+def test_a_packaged_program_has_no_default_interpreter_because_its_own_executable_is_mathdoer(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    assert default_interpreter_path() is None
+    assert create_run_settings(tmp_path / "configuration").default_interpreter_path is None

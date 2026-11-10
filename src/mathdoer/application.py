@@ -22,11 +22,20 @@ UNREADABLE_SETTINGS_NOTICE = (
 )
 
 
+def default_interpreter_path() -> Path | None:
+    """The Python that runs prompts when the settings file names none: the one mathdoer runs
+    on, which has no extra packages. A packaged program has none, because its own executable
+    is mathdoer, and starting that to run a prompt would open another window."""
+    if getattr(sys, "frozen", False):
+        return None
+    return Path(sys.executable)
+
+
 def create_run_settings(configuration_directory: Path | None = None) -> RunSettings:
     directory = configuration_directory or user_configuration_directory()
     return RunSettings(
         language=PYTHON,
-        default_interpreter_path=Path(sys.executable),
+        default_interpreter_path=default_interpreter_path(),
         settings_path=settings_file_path(PYTHON, directory),
         startup_path=ensure_startup_file(PYTHON, directory),
         registry_path=shipped_registry_path(),

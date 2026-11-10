@@ -218,3 +218,30 @@ def test_the_commented_example_in_the_default_file_is_valid_once_uncommented():
     ]
     assert len(example_lines) == 1
     assert tomllib.loads(example_lines[0][2:]) == {"interpreter": "C:\\Python311\\python.exe"}
+
+
+# ------------------------------------------------------- when there is no default interpreter
+# A packaged program has no Python of its own to fall back on: its own executable is mathdoer.
+
+def test_without_a_default_interpreter_and_without_a_setting_the_error_says_what_to_set(settings_path):
+    for text in (None, "", "# interpreter = 'x'\n"):
+        if text is not None:
+            settings_path.write_text(text, encoding="utf-8")
+        with pytest.raises(UserSettingsError) as caught:
+            resolve_interpreter(settings_path, None)
+        message = str(caught.value)
+        assert "No interpreter" in message
+        assert "'interpreter'" in message
+        assert str(settings_path) in message
+
+
+def test_without_a_default_interpreter_a_setting_still_names_the_interpreter(settings_path, make_fake_interpreter):
+    interpreter = make_fake_interpreter()
+    settings_path.write_text(f"interpreter = '{interpreter}'\n", encoding="utf-8")
+    assert resolve_interpreter(settings_path, None) == interpreter
+
+
+def test_without_a_default_interpreter_a_mistake_in_the_file_is_still_reported_first(settings_path):
+    settings_path.write_text("interpreter = 5\n", encoding="utf-8")
+    with pytest.raises(UserSettingsError, match="must be text"):
+        resolve_interpreter(settings_path, None)
