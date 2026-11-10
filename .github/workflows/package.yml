@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-  workflow_dispatch:  # a manual run also keeps the package, as an artifact
+  workflow_dispatch:  # a manual run also keeps the zip, as an artifact
 
 jobs:
   windows:
@@ -24,11 +24,15 @@ jobs:
 
       - run: uv run pyinstaller packaging/mathdoer.spec --noconfirm
 
-      - run: uv run python packaging/check_build.py
+      - run: uv run python packaging/make_zip.py
+
+      # unpacks the zip and checks what is in it, the way a user gets it
+      - run: uv run python packaging/check_build.py dist/mathdoer-*-windows-x64.zip
+        shell: bash
 
       - uses: actions/upload-artifact@v7.0.2
         if: github.event_name == 'workflow_dispatch'
         with:
-          name: mathdoer-windows
-          path: dist/mathdoer
+          path: dist/mathdoer-*-windows-x64.zip  # the name of the zip is the name of the artifact
+          archive: false
           retention-days: 7

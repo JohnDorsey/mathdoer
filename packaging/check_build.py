@@ -1,23 +1,30 @@
-"""Checks a packaged mathdoer (the folder that packaging/mathdoer.spec builds).
+"""Checks a packaged mathdoer: the folder that packaging/mathdoer.spec builds, or the zip that
+packaging/make_zip.py makes from it.
 
-    uv run python packaging/check_build.py [folder]       (the folder is dist/mathdoer by default)
+    uv run python packaging/check_build.py [folder or zip]      (the folder dist/mathdoer by default)
 
-It checks that every file the code reads next to its own modules is in the package, then starts
-the program with an empty configuration folder of its own, never the user's, and checks that it
-stays running and creates its startup file there. Where the package carries a Python, it also
-runs a prompt on it, with the packaged worker, startup file and registry, the way the program
-does. It exits with 1 and says why when a check fails.
+It checks that every file the code reads next to its own modules is in the package, and that
+the executable carries the icon and the version of the project. It then starts the program with
+an empty configuration folder of its own, never the user's, and checks that it stays running and
+creates its startup file there. Where the package carries a Python, it also runs a prompt on it,
+with the packaged worker, startup file and registry, the way the program does. Given a zip, it
+also checks the zip itself (its name, its folder, the license and readme beside the program) and
+unpacks it into a temporary folder to run all of that on what the user would get. It exits with
+1 and says why when a check fails.
 """
 import json
 import os
+import struct
 import subprocess
 import sys
 import tempfile
 import time
+import zipfile
 from pathlib import Path
 
 import mathdoer
 from mathdoer.application import BUNDLED_INTERPRETER_PATH
+from mathdoer.interface.icon import ICON_PATH
 from mathdoer.languages.python import PYTHON, WORKER_PATH
 from mathdoer.registry import shipped_registry_path
 from mathdoer.running import (
@@ -30,7 +37,9 @@ from mathdoer.running import (
 )
 from mathdoer.user_files import startup_file_path, user_configuration_directory
 
-PROJECT = Path(__file__).resolve().parent.parent
+from make_zip import EXTRA_FILE_NAMES, UnsupportedSystemError, folder_name, platform_label, zip_name
+from project_information import PROJECT, read_version
+
 SOURCE_ROOT = Path(mathdoer.__file__).resolve().parent.parent
 STARTUP_TIMEOUT_SECONDS = 30
 SECONDS_IT_MUST_KEEP_RUNNING = 3
@@ -42,7 +51,13 @@ def executable_in(folder: Path) -> Path:
 
 def files_the_code_reads_next_to_its_modules() -> list[Path]:
     """Their paths relative to the folder that holds the mathdoer package."""
-    paths = [shipped_registry_path(), PYTHON.default_startup_path, PYTHON.default_settings_path, WORKER_PATH]
+    paths = [
+        shipped_registry_path(),
+        PYTHON.default_startup_path,
+        PYTHON.default_settings_path,
+        WORKER_PATH,
+        ICON_PATH,
+    ]
     return [Path(path).resolve().relative_to(SOURCE_ROOT) for path in paths]
 
 
@@ -61,11 +76,69 @@ def find_bundled(folder: Path, relative_path: Path) -> Path | None:
 
 
 def check_files(folder: Path) -> list[str]:
-    return [
+    problems = [
         f"{relative_path} is not in the package"
         for relative_path in files_the_package_must_carry()
         if find_bundled(folder, relative_path) is None
     ]
+    # the icon is an .ico file, which Qt reads with a plugin of its own
+    reader_folder = Path("PySide6") / "plugins" / "imageformats"
+    if not any(list((base / reader_folder).glob("*qico*")) for base in (folder / "_internal", folder)):
+        problems.append(f"Qt's reader for .ico files is not in the package (looked in {reader_folder})")
+    return problems
+
+
+def images_in_icon_file(path: Path) -> list[bytes]:
+    """The image of each entry of an icon file, in the order of the entries."""
+    data = path.read_bytes()
+    count = struct.unpack_from("<H", data, 4)[0]
+    images = []
+    for index in range(count):
+        length, offset = struct.unpack_from("<II", data, 6 + 16 * index + 8)
+        images.append(data[offset : offset + length])
+    return images
+
+
+def images_in_executable(path: Path) -> list[bytes]:
+    """The images of the first icon group of an executable, in the order of the group; none when
+    it has no icon."""
+    import pefile
+
+    executable = pefile.PE(str(path), fast_load=True)
+    executable.parse_data_directories(directories=[pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_RESOURCE"]])
+    directory = getattr(executable, "DIRECTORY_ENTRY_RESOURCE", None)  # missing when there are no resources
+    resources = {entry.id: entry for entry in directory.entries} if directory else {}
+    groups = resources.get(pefile.RESOURCE_TYPE["RT_GROUP_ICON"])
+    icons = resources.get(pefile.RESOURCE_TYPE["RT_ICON"])
+    if groups is None or icons is None:
+        return []
+
+    def data_of(named_entry) -> bytes:
+        leaf = named_entry.directory.entries[0].data.struct  # the first language of the resource
+        return executable.get_data(leaf.OffsetToData, leaf.Size)
+
+    group = data_of(groups.directory.entries[0])
+    count = struct.unpack_from("<H", group, 4)[0]
+    icons_by_identifier = {entry.id: entry for entry in icons.directory.entries}
+    identifiers = [struct.unpack_from("<H", group, 6 + 14 * index + 12)[0] for index in range(count)]
+    return [data_of(icons_by_identifier[identifier]) for identifier in identifiers]
+
+
+def check_executable_resources(folder: Path) -> list[str]:
+    """The icon and the version information that the spec asked for are in the executable (Windows)."""
+    from PyInstaller.utils.win32.versioninfo import read_version_info_from_executable
+
+    from windows_version_information import version_information
+
+    executable = executable_in(folder)
+    problems = []
+    if images_in_executable(executable) != images_in_icon_file(ICON_PATH):
+        problems.append(f"the icon of {executable.name} is not the icon of mathdoer ({ICON_PATH.name})")
+    found = read_version_info_from_executable(str(executable))
+    expected = version_information(read_version())
+    if found is None or found.toRaw() != expected.toRaw():
+        problems.append(f"the version information of {executable.name} is not that of mathdoer {read_version()}")
+    return problems
 
 
 def check_it_starts_and_keeps_running(folder: Path) -> list[str]:
@@ -141,20 +214,68 @@ def check_a_prompt_runs_on_the_packaged_python(folder: Path) -> list[str]:
     return []
 
 
-def main() -> int:
-    folder = Path(sys.argv[1]) if len(sys.argv) > 1 else PROJECT / "dist" / "mathdoer"
+def check_folder(folder: Path) -> list[str]:
+    """The checks that need only the folder; each runs only when the ones before it passed."""
     if not executable_in(folder).is_file():
-        print(f"There is no {executable_in(folder)}. Build it first (see packaging/mathdoer.spec).")
-        return 1
-    problems = check_files(folder)
-    if not problems:
-        problems = check_it_starts_and_keeps_running(folder)
-    if not problems and sys.platform == "win32":
-        problems = check_a_prompt_runs_on_the_packaged_python(folder)
+        return [f"there is no {executable_in(folder)}; build it first (see packaging/mathdoer.spec)"]
+    checks = [check_files]
+    if sys.platform == "win32":
+        checks.append(check_executable_resources)
+    checks.append(check_it_starts_and_keeps_running)
+    if sys.platform == "win32":
+        checks.append(check_a_prompt_runs_on_the_packaged_python)
+    for check in checks:
+        problems = check(folder)
+        if problems:
+            return problems
+    return []
+
+
+def check_zip_contents(archive: zipfile.ZipFile, zip_path: Path) -> list[str]:
+    """The name of the zip, the single folder in it and the files beside the program."""
+    version = read_version()
+    try:
+        expected_name = zip_name(version, platform_label())
+    except UnsupportedSystemError as error:
+        return [str(error)]
+    problems = []
+    if zip_path.name != expected_name:
+        problems.append(f"the zip is called {zip_path.name}, not {expected_name}")
+    broken = archive.testzip()
+    if broken is not None:
+        problems.append(f"{broken} in the zip does not match its checksum")
+    names = archive.namelist()
+    top_level = {name.split("/")[0] for name in names}
+    if top_level != {folder_name(version)}:
+        problems.append(f"the zip holds {sorted(top_level)} at its top, not only {folder_name(version)}")
+    problems += [
+        f"{name} is not in the zip, beside the program"
+        for name in EXTRA_FILE_NAMES
+        if f"{folder_name(version)}/{name}" not in names
+    ]
+    return problems
+
+
+def check_zip(zip_path: Path) -> list[str]:
+    with zipfile.ZipFile(zip_path) as archive:
+        problems = check_zip_contents(archive, zip_path)
+        if problems:
+            return problems
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as unpacked:
+            archive.extractall(unpacked)
+            return check_folder(Path(unpacked) / folder_name(read_version()))
+
+
+def main() -> int:
+    target = Path(sys.argv[1]) if len(sys.argv) > 1 else PROJECT / "dist" / "mathdoer"
+    if target.suffix == ".zip":
+        problems = check_zip(target) if target.is_file() else [f"there is no {target}"]
+    else:
+        problems = check_folder(target)
     for problem in problems:
         print("FAILED:", problem)
     if not problems:
-        print(f"OK: {executable_in(folder)} has its files, starts, and keeps running.")
+        print(f"OK: {target} passed every check.")
     return 1 if problems else 0
 
 

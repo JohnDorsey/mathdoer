@@ -72,10 +72,13 @@ Give the full path of the program, or the name of one on your PATH, such as `py`
 ```
 uv run python packaging/fetch_embeddable_python.py
 uv run pyinstaller packaging/mathdoer.spec
-uv run python packaging/check_build.py
+uv run python packaging/make_zip.py
+uv run python packaging/check_build.py dist/mathdoer-1.0.0-windows-x64.zip
 ```
 
-The first downloads python.org's embeddable Python (3.13, about 11 MB, once; the file is checked against a pinned checksum), the second builds `dist/mathdoer/`, a folder with `mathdoer.exe` in it, and the third checks it: that the files the program reads are in it, that a prompt runs on the Python it carries, and that it starts, with a configuration folder of its own, and keeps running.
+The first downloads python.org's embeddable Python (3.13, about 11 MB, once; the file is checked against a pinned checksum). The second builds `dist/mathdoer/`, a folder with `mathdoer.exe` in it, and the third packs it, with `LICENSE` and `README.md`, into `dist/mathdoer-1.0.0-windows-x64.zip`: the file to hand out, which unzips into one folder, `mathdoer-1.0.0`. The fourth unzips that zip into a temporary folder and checks what a user would get: that the files the program reads are in it, that the executable has the icon and the version of the project, that a prompt runs on the Python it carries, and that it starts, with a configuration folder of its own, and keeps running. `check_build.py` also takes the folder `dist/mathdoer` instead of the zip.
+
+The version, 1.0.0, is written in `pyproject.toml` and nowhere else; the version information of `mathdoer.exe` (shown in its properties) and the name of the zip are made from it. The icon, `src/mathdoer/interface/icon.ico`, is drawn by `packaging/make_icon.py` (run it only to change the icon; it needs the font Segoe Script, which Windows ships).
 
 The packaged program runs prompts on that Python, which has the standard library and nothing else, as the unpackaged program does on its own Python. Name another in `settings_python.toml` (Edit > Edit Python settings file) to use packages. The embeddable Python exists for Windows only; a package built elsewhere has none, and a run without an `interpreter` setting says so.
 

@@ -71,6 +71,12 @@ Continuous integration and packaging.
 - [x] The packaged program carries python.org's embeddable Python 3.13 (Windows) and runs prompts on it by default; `check_build.py` runs a prompt on it with the packaged worker, startup file and registry
   - [ ] Other systems have no embeddable Python: a macOS or Linux package would need its own plan (python-build-standalone is the likely source)
   - [ ] The checksum was computed from the download over HTTPS; python.org's PGP signature was not checked (the key could not be fetched in a usable form)
+- [x] Version 1.0.0, written in `pyproject.toml` only; the packaging scripts read it
+- [x] Icon: a square in two rectangles, the top white with a black cursive "m", the bottom black with a white cursive "dm" (`packaging/make_icon.py` draws `src/mathdoer/interface/icon.ico`; the window wears it and the executable carries it)
+- [x] Version information in `mathdoer.exe` (the Details tab of its properties)
+- [x] The package is a zip, `dist/mathdoer-1.0.0-windows-x64.zip`, holding the folder `mathdoer-1.0.0` with the program, `LICENSE` and `README.md`; `check_build.py` unzips it and checks what is in it; a manual run of the package workflow keeps it as an artifact
+  - [ ] The icon was drawn with Segoe Script, a font of Microsoft's. The font file is not in the repository or the package, only a picture of two groups of letters; I believe that is allowed but did not check Microsoft's license terms. A font with an open license (the SIL Open Font License, for example) would leave no question, and the script needs only a new `FONT_FAMILY`
+  - [ ] Nothing is signed: Windows SmartScreen warns about an unknown program when the zip comes from the internet (see code signing below)
 
 ## Unscheduled
 
@@ -88,7 +94,9 @@ Continuous integration and packaging.
 - [ ] Reset the startup file to the bundled default
 - [ ] Accept Notepad++ theme files; bundle Notepad++ themes (check the license of each theme first)
 - [ ] `input()` opens a popup window with a text field (the worker protocol already has a closed standard input to extend)
-- [ ] Finish the package: an icon and version information, a smaller size (127 MB; `opengl32sw.dll`, Qt6Network and Qt6Svg are probably unneeded), one file or an installer or a zip, a macOS app bundle and a Linux build (PyInstaller sets `LD_LIBRARY_PATH` for child processes on Linux, which the worker must not inherit: restore `LD_LIBRARY_PATH_ORIG`), code signing
+- [ ] Finish the package: a smaller size (127 MB, 54 MB zipped; `opengl32sw.dll`, Qt6Network and Qt6Svg are probably unneeded), a macOS app bundle (needs an .icns icon) and a Linux build (PyInstaller sets `LD_LIBRARY_PATH` for child processes on Linux, which the worker must not inherit: restore `LD_LIBRARY_PATH_ORIG`), code signing
+- [ ] Publish version 1.0.0: a GitHub release with the zip (a tag `v1.0.0`; not done, since a release is public)
+- [ ] An About window or some other place that shows the version (the version is in the properties of `mathdoer.exe` only; a new interface feature, so it needs approval)
 - [ ] Third box above the prompt box for definitions that persist between runs
 - [ ] File menu and persistence of the prompt text
 - [ ] History (not decided; leaning towards no persisted Python session between runs)
