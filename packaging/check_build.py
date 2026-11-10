@@ -141,6 +141,12 @@ def check_executable_resources(folder: Path) -> list[str]:
     return problems
 
 
+def startup_file_is_the_packaged_default(startup_path: Path, folder: Path) -> bool:
+    """The program copies the default startup file that it carries. The reference is that file in
+    the package, not the one in this source tree: a package built elsewhere has other line endings."""
+    return startup_path.read_bytes() == packaged(folder, PYTHON.default_startup_path).read_bytes()
+
+
 def check_it_starts_and_keeps_running(folder: Path) -> list[str]:
     with tempfile.TemporaryDirectory() as home:
         environment = {
@@ -172,9 +178,8 @@ def check_it_starts_and_keeps_running(folder: Path) -> list[str]:
             time.sleep(SECONDS_IT_MUST_KEEP_RUNNING)
             if process.poll() is not None:
                 return [f"the program stopped with exit code {process.returncode} just after it started"]
-            expected = PYTHON.default_startup_path.read_bytes()
-            if startup_path.read_bytes() != expected:
-                return ["the startup file it created is not a copy of the bundled default"]
+            if not startup_file_is_the_packaged_default(startup_path, folder):
+                return ["the startup file it created is not a copy of the default in the package"]
             return []
         finally:
             if process.poll() is None:
