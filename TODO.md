@@ -46,7 +46,7 @@ First version.
   - [x] Monospace font; word wrap on, toggled with Alt+Z in the box that has the focus
   - [x] No auto-closing brackets or quotes
 - [x] GPL-3.0-or-later license
-- [ ] Windows first, Python 3.11 or later
+- [ ] Windows first; mathdoer itself needs Python 3.12 or later, the Python that runs prompts 3.11 or later
 
 Interpreter setting.
 
@@ -65,8 +65,8 @@ Settings window.
 
 Continuous integration and packaging.
 
-- [x] GitHub Actions run the tests on Linux (Python 3.12), macOS and Windows (Python 3.11)
-  - [x] Linux runs Python 3.12 on purpose: PySide6 6.12.0 on Linux loses a reference to None on every call to some protected Qt methods (`QSyntaxHighlighter.setFormat`, a resize, a key press), and before Python 3.12 that count is real, so the interpreter aborts after a few thousand calls. Measured on CI; macOS and Windows are clean
+- [x] GitHub Actions run the tests on Linux, macOS and Windows, all on Python 3.12
+  - [x] mathdoer needs Python 3.12 because PySide6 6.12.0 on Linux loses a reference to None on every call to some protected Qt methods (`QSyntaxHighlighter.setFormat`, a resize, a key press), and before Python 3.12 that count is real, so the interpreter aborts after a few thousand calls. Measured on CI; macOS and Windows are clean
 - [x] A first packaged program: `uv run pyinstaller packaging/mathdoer.spec` builds `dist/mathdoer/mathdoer.exe`, `uv run python packaging/check_build.py` checks it (files present, starts with its own empty configuration folder, keeps running), and CI does both on Windows
 - [ ] Run prompts from the packaged program: it has no Python of its own (its executable is mathdoer), so until one is bundled the settings file must name an `interpreter`, and a run without one says so
 
@@ -86,7 +86,6 @@ Continuous integration and packaging.
 - [ ] Reset the startup file to the bundled default
 - [ ] Accept Notepad++ theme files; bundle Notepad++ themes (check the license of each theme first)
 - [ ] `input()` opens a popup window with a text field (the worker protocol already has a closed standard input to extend)
-- [ ] Decide whether mathdoer itself needs Python 3.12 or later: on Linux with 3.11 the app would abort after enough typing (see the CI note above), and the cost of requiring 3.12 is nil for users, since uv fetches it and the prompt interpreter can still be any 3.11 or later
 - [ ] Bundle a Python for the packaged program to run prompts with (on Windows the embeddable distribution from python.org, about 10 MB, standard library only, as the unpackaged program has); needs a decision
 - [ ] Finish the package: an icon and version information, a smaller size (98 MB; `opengl32sw.dll`, Qt6Network and Qt6Svg are probably unneeded), one file or an installer or a zip, a macOS app bundle and a Linux build (PyInstaller sets `LD_LIBRARY_PATH` for child processes on Linux, which the worker must not inherit: restore `LD_LIBRARY_PATH_ORIG`), code signing
 - [ ] Third box above the prompt box for definitions that persist between runs

@@ -13,13 +13,12 @@ jobs:
     strategy:
       fail-fast: false  # a failure on one system must not hide the result on the others
       matrix:
+        # mathdoer needs Python 3.12 or later: PySide6 6.12.0 on Linux loses a reference to None on
+        # every call to some protected Qt methods, which aborts Python 3.11, where None is counted.
         include:
-          # Not 3.11 on Linux: PySide6 6.12.0 there loses a reference to None on every call to some
-          # protected Qt methods (QSyntaxHighlighter.setFormat, a resize, a key press...). None is
-          # counted before Python 3.12, so the interpreter aborts once the count reaches zero.
           - {os: ubuntu-latest, python-version: "3.12"}
-          - {os: macos-latest, python-version: "3.11"}
-          - {os: windows-latest, python-version: "3.11"}
+          - {os: macos-latest, python-version: "3.12"}
+          - {os: windows-latest, python-version: "3.12"}
     steps:
       - uses: actions/checkout@v7.0.1
 
