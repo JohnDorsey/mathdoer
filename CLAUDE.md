@@ -27,7 +27,9 @@ Reference install of PrecCalc64: `E:\data-game-win10pro2\lock\portable\preccalc6
 - Licensed GPL-3.0-or-later; copyright John Dorsey.
 - Other languages besides Python will come later, but the interface always stays Python. Keep everything outside a language's own module language-neutral, and keep Python-specific names out of neutral modules.
 - Menu items insert a name on click and the literal value on Shift+click (Alt+click closes the menu on Windows).
-- Windows first, Python 3.11 or later. macOS, Linux and an EXE package come later.
+- Windows first, Python 3.11 or later. macOS, Linux and an EXE package come later; CI runs the tests on all three systems and builds the Windows package (`packaging/`).
+- Linux CI runs Python 3.12 because PySide6 6.12.0 on Linux loses references to None, which kills Python 3.11 (details in `TODO.md`). Do not turn that into 3.11 without checking the bug is gone.
+- A packaged program cannot run prompts on its own executable, since that is mathdoer: it has no default interpreter, and a run without an `interpreter` setting says so.
 
 ## Commands
 

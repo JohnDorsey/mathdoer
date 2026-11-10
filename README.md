@@ -67,6 +67,15 @@ interpreter = 'C:\Python311\python.exe'
 
 Give the full path of the program, or the name of one on your PATH, such as `py`. Use single quotes around a Windows path so its backslashes are taken literally. A run does not inherit the virtual environment that mathdoer itself runs in (`uv run` activates one), so `py`, `python` and the Windows `python3.exe` alias reach the Python they stand for.
 
+## Building a package
+
+```
+uv run pyinstaller packaging/mathdoer.spec
+uv run python packaging/check_build.py
+```
+
+The first builds `dist/mathdoer/`, a folder with `mathdoer.exe` in it, the second checks it: that the files the program reads are in it, and that it starts, with a configuration folder of its own, and keeps running. A packaged program has no Python of its own to run prompts on, so for now name one in `settings_python.toml` (Edit > Edit Python settings file); without one a run says so.
+
 ## License
 
 Copyright (C) 2026 John Dorsey
