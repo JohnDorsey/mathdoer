@@ -39,6 +39,7 @@ EXPECTED_NAMES = [
     "output_box_font_family",
     "output_box_font_size",
     "tab_width",
+    "single_line_mode",
     "tab_key_inserts_spaces",
     "tab_indents_selected_lines",
     "shift_tab_removes_indentation",
@@ -78,9 +79,18 @@ def test_the_descriptions_cover_the_fields_of_the_class_in_order():
 
 
 def test_every_feature_is_on_by_default_so_that_nothing_changes_until_one_is_turned_off():
+    """Single-line mode is a mode, not a feature: turning it on takes Enter away from the text."""
     assert YES_OR_NO_DESCRIPTIONS
     for description in YES_OR_NO_DESCRIPTIONS:
-        assert getattr(DEFAULT_INTERFACE_SETTINGS, description.name) is True, description.name
+        expected = description.name != "single_line_mode"
+        assert getattr(DEFAULT_INTERFACE_SETTINGS, description.name) is expected, description.name
+
+
+def test_single_line_mode_is_off_by_default_and_its_label_says_what_each_key_does_in_both_modes():
+    assert DEFAULT_INTERFACE_SETTINGS.single_line_mode is False
+    description = next(d for d in SETTING_DESCRIPTIONS if d.name == "single_line_mode")
+    for text in ("Enter runs", "Alt+Enter", "Ctrl+Enter"):
+        assert text in description.label
 
 
 def test_the_window_starts_at_900_by_700_by_default():

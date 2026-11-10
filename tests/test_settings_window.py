@@ -272,7 +272,8 @@ def test_clicking_a_checkbox_changes_that_setting_alone_and_announces_it(dialog,
     dialog.show_page(description.page.title)
     checkbox = dialog.checkbox_for(description.name)
     checkbox.click()
-    assert announced.settings == [replace(DEFAULT_INTERFACE_SETTINGS, **{description.name: False})]
+    opposite = not description.default  # a mode, such as single-line mode, may start off
+    assert announced.settings == [replace(DEFAULT_INTERFACE_SETTINGS, **{description.name: opposite})]
     assert dialog.settings == announced.settings[-1]
     checkbox.click()
     assert announced.settings[-1] == DEFAULT_INTERFACE_SETTINGS

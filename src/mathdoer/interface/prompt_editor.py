@@ -3,7 +3,7 @@ from collections.abc import Callable, Iterator, Sequence
 from dataclasses import replace
 from typing import NamedTuple
 
-from PySide6.QtCore import QEvent, QRect, QSize, Qt
+from PySide6.QtCore import QEvent, QRect, QSize, Qt, Signal
 from PySide6.QtGui import QColor, QKeyEvent, QPainter, QPaintEvent, QResizeEvent, QTextBlock, QTextCursor, QTextDocument
 from PySide6.QtWidgets import QTextEdit, QWidget
 
@@ -31,6 +31,7 @@ from mathdoer.utf16 import index_at_utf16_offset, utf16_length
 
 Key = Qt.Key
 Modifier = Qt.KeyboardModifier
+ENTER_KEYS = (Key.Key_Return, Key.Key_Enter)
 
 GUTTER_PADDING = 8  # pixels on each side of the line numbers
 MINIMUM_GUTTER_DIGITS = 3  # so the gutter does not change width until a thousand lines
@@ -80,6 +81,8 @@ class _LineNumberGutter(QWidget):
 
 
 class PromptEditor(TextBox):
+    run_requested = Signal()  # Enter in single-line mode; the window runs the prompt
+
     _ready = False  # set once everything the font-change handler uses exists
     _settings = DEFAULT_INTERFACE_SETTINGS
 
@@ -279,6 +282,15 @@ class PromptEditor(TextBox):
             event.ignore()  # Ctrl+Enter runs the prompt; the window handles it
             return
 
+        single_line_modifiers = (Modifier.NoModifier, Modifier.AltModifier)
+        if key in ENTER_KEYS and self._settings.single_line_mode and modifiers in single_line_modifiers:
+            if modifiers == Modifier.NoModifier:
+                self.run_requested.emit()
+            else:
+                self._start_new_line()
+            event.accept()
+            return
+
         command = self._command_for(key, modifiers)
         if command is not None:
             command()
@@ -312,17 +324,11 @@ class PromptEditor(TextBox):
                 return lambda: None
             return lambda: self._apply_command(lambda lines, a, c: dedent(lines, a, c, rules))
         if (
-            key in (Key.Key_Return, Key.Key_Enter)
+            key in ENTER_KEYS
             and modifiers in (Modifier.NoModifier, Modifier.ShiftModifier)
             and settings.enter_keeps_indentation
         ):
-            return lambda: self._apply_command(
-                lambda lines, a, c: insert_newline(
-                    lines, a, c, rules,
-                    indent_after_block_opening=settings.indent_after_block_opening,
-                    use_tab_character=use_tab_character,
-                )
-            )
+            return self._start_new_line_keeping_indentation
         if key == Key.Key_Slash and modifiers == Modifier.ControlModifier and settings.toggle_comment_command:
             return lambda: self._apply_command(lambda lines, a, c: toggle_comment(lines, a, c, rules))
         if key == Key.Key_D and modifiers == Modifier.ControlModifier and settings.duplicate_lines_command:
@@ -337,6 +343,27 @@ class PromptEditor(TextBox):
             direction = -1 if key == Key.Key_Up else 1
             return lambda: self._apply_command(lambda lines, a, c: move_lines(lines, a, c, direction))
         return None
+
+    def _start_new_line_keeping_indentation(self) -> None:
+        rules = self._rules
+        settings = self._settings
+        self._apply_command(
+            lambda lines, anchor, caret: insert_newline(
+                lines, anchor, caret, rules,
+                indent_after_block_opening=settings.indent_after_block_opening,
+                use_tab_character=not settings.tab_key_inserts_spaces,
+            )
+        )
+
+    def _start_new_line(self) -> None:
+        """What Enter does in multi-line mode; in single-line mode, Alt+Enter."""
+        if self._settings.enter_keeps_indentation:
+            self._start_new_line_keeping_indentation()
+            return
+        cursor = self.textCursor()
+        cursor.insertBlock()  # replaces a selection
+        self.setTextCursor(cursor)
+        self.ensureCursorVisible()
 
     def _replace_selection_with_tab(self) -> None:
         """Tab when it is not to indent every selected line: the selection, if any, becomes

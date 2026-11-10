@@ -113,6 +113,10 @@ class InterfaceSettings:
         DEFAULT_TAB_WIDTH, EDITING_PAGE, "Tab width in characters (the width of one level of indentation)",
         minimum=MINIMUM_TAB_WIDTH, maximum=MAXIMUM_TAB_WIDTH,
     )
+    single_line_mode: bool = _setting(
+        False, EDITING_PAGE,
+        "Single-line mode: Enter runs, Alt+Enter starts a new line (off: Ctrl+Enter runs)",
+    )
     tab_key_inserts_spaces: bool = _setting(
         True, EDITING_PAGE, "Tab inserts spaces (turned off, Tab inserts a tab character)"
     )

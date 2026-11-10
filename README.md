@@ -15,10 +15,10 @@ uv run pytest
 
 | Keys | Does |
 | --- | --- |
-| Ctrl+Enter | Run the prompt |
+| Ctrl+Enter | Run the prompt (in single-line mode, Enter runs it too) |
 | Shift+Esc | Cancel a running prompt |
 | Tab, Shift+Tab | Indent, dedent (every selected line) |
-| Enter | New line, indented like the line above and one level more after a colon |
+| Enter | New line, indented like the line above and one level more after a colon (in single-line mode, Alt+Enter does this and Enter runs the prompt) |
 | Ctrl+/ | Comment or uncomment the lines |
 | Ctrl+D | Duplicate the lines |
 | Alt+Up, Alt+Down | Move the lines |
@@ -47,7 +47,7 @@ Edit > Settings… opens a window with the pages listed down the left and the se
 - **Window:** the width and height the window has when mathdoer starts. A window larger than the screen is made to fit it.
 - **Display:** line numbers, colors for keywords, strings, comments and numbers, the highlight of the matching bracket, indentation guides, wrapping of long lines in each box (Alt+Z changes this one too), and zooming with the keys and with the mouse wheel.
 - **Fonts:** the font and the size, in points, of the prompt box and of the output box, each on its own. Pick a font from the list of monospace fonts or type the name of any font; one that is not installed is replaced by Consolas or, failing that, another monospace font. Zooming moves each box a point at a time from its own size, and Ctrl+0 puts both back to the sizes set here. Choosing another font or size for a box replaces its zoom.
-- **Editing:** the width of a tab, in characters (4 to match Python's convention, which is the default), which is how far apart the tab stops and the indentation guides are and how many spaces one level of indentation takes; whether Tab inserts spaces or a tab character, whether Tab indents every selected line, Shift+Tab, whether Enter keeps the indentation and adds a level after a line that opens a block, and the Home key going to the first character before the start of the line.
+- **Editing:** the width of a tab, in characters (4 to match Python's convention, which is the default), which is how far apart the tab stops and the indentation guides are and how many spaces one level of indentation takes; single-line mode, in which Enter runs the prompt and Alt+Enter starts a new line (Ctrl+Enter still runs, Shift+Enter still starts a new line); whether Tab inserts spaces or a tab character, whether Tab indents every selected line, Shift+Tab, whether Enter keeps the indentation and adds a level after a line that opens a block, and the Home key going to the first character before the start of the line.
 - **Line commands:** comment, duplicate, move and delete lines.
 - **Find:** the find and replace bar.
 

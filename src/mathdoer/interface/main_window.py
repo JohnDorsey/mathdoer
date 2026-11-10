@@ -162,6 +162,7 @@ class MainWindow(QMainWindow):
         ]
         for box in (self.prompt_box, self.output_box):
             box.zoom_requested.connect(self.zoom_by)
+        self.prompt_box.run_requested.connect(self.run_prompt)
 
         self._timer = QTimer(self)
         self._timer.setInterval(POLL_INTERVAL_MILLISECONDS)

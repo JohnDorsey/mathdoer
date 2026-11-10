@@ -60,6 +60,7 @@ Settings window.
   - [x] Default window size (applies at the next start; a size larger than the screen is fitted to it)
   - [x] `interface_settings.toml`, written by the window and read at launch; a file that cannot be read gives the defaults and a red message
   - [x] Edit settings renamed Edit Python settings file; Alt+Z keeps its choice as the wrapping setting
+  - [x] Single-line mode (Editing page, off by default): Enter runs the prompt and Alt+Enter starts a new line; off, Enter starts a new line and Ctrl+Enter runs
   - [x] Tab width (Editing page) and a Fonts page: family and size for the prompt box and the output box separately; zooming moves each box from its own size and Ctrl+0 returns to the sizes in the settings
 
 ## Unscheduled
