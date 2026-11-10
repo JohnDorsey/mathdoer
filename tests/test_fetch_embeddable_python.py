@@ -1,21 +1,17 @@
 """Tests for packaging/fetch_embeddable_python.py, which downloads the Python that the packaged
 program runs prompts on. Nothing here touches the network: the download is replaced."""
 import hashlib
-import importlib.util
 import zipfile
 from pathlib import Path
 
 import pytest
 
-SCRIPT = Path(__file__).resolve().parent.parent / "packaging" / "fetch_embeddable_python.py"
+import fetch_embeddable_python
 
 
 @pytest.fixture
 def fetch():
-    specification = importlib.util.spec_from_file_location("fetch_embeddable_python", SCRIPT)
-    module = importlib.util.module_from_spec(specification)
-    specification.loader.exec_module(module)
-    return module
+    return fetch_embeddable_python
 
 
 def make_zip(path: Path, files: dict[str, bytes]) -> bytes:

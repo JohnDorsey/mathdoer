@@ -1,6 +1,6 @@
 [project]
 name = "mathdoer"
-version = "0.1.0"
+version = "1.0.0"
 description = "A calculator that executes the Python code you type"
 readme = "README.md"
 license = "GPL-3.0-or-later"
@@ -20,6 +20,7 @@ build-backend = "uv_build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["packaging"]  # the packaging scripts are plain modules, tested by name
 
 [dependency-groups]
 dev = [
