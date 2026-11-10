@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import QSplitter
 
+from mathdoer.interface.icon import application_icon
 from mathdoer.interface.output_display import truncation_notice
 from mathdoer.interface.theme import DARK_THEME
 
@@ -48,6 +49,13 @@ def foreground_at(display, index):
 
 def test_the_window_has_a_title(window):
     assert window.windowTitle() == "mathdoer"
+
+
+def test_the_window_and_the_settings_window_wear_the_icon(window):
+    assert not window.windowIcon().isNull()
+    assert window.windowIcon().availableSizes() == application_icon().availableSizes()
+    window.open_settings_window()
+    assert window.settings_window.windowIcon().availableSizes() == application_icon().availableSizes()
 
 
 def test_the_prompt_box_is_above_the_output_box_in_a_draggable_splitter(window):

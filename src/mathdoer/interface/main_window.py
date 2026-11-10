@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QMainWindow, QSplitter
 from mathdoer import text_editor
 from mathdoer.interface.edit_menu import EditMenu
 from mathdoer.interface.focus_tracker import ActiveBoxTracker
+from mathdoer.interface.icon import application_icon
 from mathdoer.interface.output_display import OutputDisplay
 from mathdoer.interface.find_bar import FindBar
 from mathdoer.interface.prompt_editor import PromptEditor
@@ -103,6 +104,7 @@ class MainWindow(QMainWindow):
         self._shown_progress_text: str | None = None
 
         self.setWindowTitle(WINDOW_TITLE)
+        self.setWindowIcon(application_icon())  # the settings window, a child, wears it too
         self.resize(
             *fitted_window_size(interface_settings.window_width, interface_settings.window_height, screen_size())
         )
