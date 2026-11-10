@@ -10,7 +10,6 @@ from PyInstaller.utils.hooks import collect_data_files
 
 sys.path.insert(0, SPECPATH)  # the scripts beside this file
 from project_information import read_version
-from windows_version_information import version_information
 
 project = Path(SPECPATH).parent
 package = project / "src" / "mathdoer"
@@ -32,6 +31,17 @@ if sys.platform == "win32":
         raise SystemExit("Run packaging/fetch_embeddable_python.py first: there is no " + str(embeddable_python))
     datas += [(str(embeddable_python), "python")]
 
+# The icon of the file (the window loads the same file) and the version shown in its properties.
+# Only Windows takes an .ico file and a version resource.
+executable_options = {}
+if sys.platform == "win32":
+    from windows_version_information import version_information  # needs pefile, which PyInstaller installs on Windows only
+
+    executable_options = {
+        "icon": str(package / "interface" / "icon.ico"),
+        "version": version_information(read_version()),
+    }
+
 analysis = Analysis(
     [str(package / "__main__.py")],
     pathex=[str(project / "src")],
@@ -46,9 +56,6 @@ executable = EXE(
     exclude_binaries=True,
     name="mathdoer",
     console=False,  # a window program: no console window behind it
-    # The icon of the file, which is also the icon of the window until Qt sets the same file on it,
-    # and the version shown in its properties. Only Windows takes an .ico file and a version resource.
-    icon=str(package / "interface" / "icon.ico") if sys.platform == "win32" else None,
-    version=version_information(read_version()) if sys.platform == "win32" else None,
+    **executable_options,
 )
 COLLECT(executable, analysis.binaries, analysis.datas, name="mathdoer")

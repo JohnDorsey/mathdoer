@@ -1,6 +1,11 @@
 """Tests for packaging/windows_version_information.py: the version resource of mathdoer.exe,
 which Windows shows in the properties of the file and Task Manager shows as the name."""
 import pytest
+
+# PyInstaller's code for version resources needs pefile, which PyInstaller installs on Windows only,
+# and only a Windows program has a version resource
+pytest.importorskip("pefile", reason="the version resource is made on Windows only")
+
 from PyInstaller.utils.win32.versioninfo import VSVersionInfo
 
 import windows_version_information as information
