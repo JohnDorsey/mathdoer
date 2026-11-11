@@ -8,3 +8,6 @@ wheels/
 
 # Virtual environments
 .venv
+
+# A launcher that only works on one machine
+/launch.bat
