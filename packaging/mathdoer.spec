@@ -10,6 +10,7 @@ from PyInstaller.utils.hooks import collect_data_files
 
 sys.path.insert(0, SPECPATH)  # the scripts beside this file
 from project_information import read_version
+from unneeded_files import is_unneeded
 
 project = Path(SPECPATH).parent
 package = project / "src" / "mathdoer"
@@ -48,6 +49,9 @@ analysis = Analysis(
     datas=datas,
     excludes=["pytest", "pytestqt", "tkinter"],
 )
+# Leave out the parts of PySide6 that mathdoer never uses (see unneeded_files.py).
+analysis.binaries = [entry for entry in analysis.binaries if not is_unneeded(entry[0])]
+analysis.datas = [entry for entry in analysis.datas if not is_unneeded(entry[0])]
 archive = PYZ(analysis.pure)
 executable = EXE(
     archive,

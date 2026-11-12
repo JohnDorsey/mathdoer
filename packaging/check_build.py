@@ -39,6 +39,7 @@ from mathdoer.user_files import startup_file_path, user_configuration_directory
 
 from make_zip import EXTRA_FILE_NAMES, UnsupportedSystemError, folder_name, platform_label, zip_name
 from project_information import PROJECT, read_version
+from unneeded_files import is_unneeded
 
 SOURCE_ROOT = Path(mathdoer.__file__).resolve().parent.parent
 STARTUP_TIMEOUT_SECONDS = 30
@@ -75,12 +76,21 @@ def find_bundled(folder: Path, relative_path: Path) -> Path | None:
     return None
 
 
+def unneeded_files_in(folder: Path) -> list[Path]:
+    """The files of the package that unneeded_files.py says to leave out, relative to the folder."""
+    paths = (path.relative_to(folder) for path in folder.rglob("*") if path.is_file())
+    return sorted(path for path in paths if is_unneeded(path.as_posix()))
+
+
 def check_files(folder: Path) -> list[str]:
     problems = [
         f"{relative_path} is not in the package"
         for relative_path in files_the_package_must_carry()
         if find_bundled(folder, relative_path) is None
     ]
+    unneeded = unneeded_files_in(folder)
+    if unneeded:
+        problems.append(f"the package carries {len(unneeded)} unneeded files, for example {unneeded[0]}")
     # the icon is an .ico file, which Qt reads with a plugin of its own
     reader_folder = Path("PySide6") / "plugins" / "imageformats"
     if not any(list((base / reader_folder).glob("*qico*")) for base in (folder / "_internal", folder)):
@@ -272,7 +282,8 @@ def check_zip(zip_path: Path) -> list[str]:
 
 
 def main() -> int:
-    target = Path(sys.argv[1]) if len(sys.argv) > 1 else PROJECT / "dist" / "mathdoer"
+    # absolute, because the checks run programs from inside the folder
+    target = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else PROJECT / "dist" / "mathdoer"
     if target.suffix == ".zip":
         problems = check_zip(target) if target.is_file() else [f"there is no {target}"]
     else:

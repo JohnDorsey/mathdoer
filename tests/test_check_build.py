@@ -52,6 +52,32 @@ class TestTheStartupFileIsTheDefaultOfThePackage:
         assert check_build.startup_file_is_the_packaged_default(created, package_folder)
 
 
+def test_a_folder_given_by_a_relative_path_is_checked_by_its_absolute_path(monkeypatch, tmp_path):
+    # the checks run the program with the folder as the working directory, so a relative path broke them
+    checked = []
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(check_build, "check_folder", lambda folder: checked.append(folder) or [])
+    monkeypatch.setattr("sys.argv", ["check_build.py", "dist/mathdoer"])
+    assert check_build.main() == 0
+    assert checked == [(tmp_path / "dist" / "mathdoer").resolve()]
+
+
+class TestUnneededFiles:
+    def test_the_unneeded_files_are_found_by_their_path_in_the_folder(self, tmp_path):
+        for name in ("Qt6Core.dll", "opengl32sw.dll", "translations/qt_de.qm"):
+            path = tmp_path / "_internal" / "PySide6" / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"x")
+        found = check_build.unneeded_files_in(tmp_path)
+        assert found == [Path("_internal/PySide6/opengl32sw.dll"), Path("_internal/PySide6/translations/qt_de.qm")]
+
+    def test_a_folder_with_only_needed_files_has_none(self, tmp_path):
+        path = tmp_path / "_internal" / "PySide6" / "Qt6Core.dll"
+        path.parent.mkdir(parents=True)
+        path.write_bytes(b"x")
+        assert check_build.unneeded_files_in(tmp_path) == []
+
+
 class TestTheContentsOfAZip:
     @pytest.fixture(autouse=True)
     def a_windows_package_at_version_1_0_0(self, monkeypatch):
